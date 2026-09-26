@@ -1,0 +1,65 @@
+import { StateMachine } from '../engine/stateMachine.js';
+import { STAGE, FIGHTER } from '../engine/constants.js';
+import { clamp } from '../engine/utils.js';
+import { fighterStates } from './fighterStates.js';
+
+export class Fighter {
+  constructor({ x, facing, color, label }) {
+    this.x = x;
+    this.y = STAGE.GROUND_Y; // feet position; only the jump state moves this
+    this.vx = 0;
+    this.vy = 0;
+    this.facing = facing; // 1 = facing right, -1 = facing left
+    this.color = color;
+    this.label = label;
+    this.width = FIGHTER.STAND_WIDTH;
+    this.height = FIGHTER.STAND_HEIGHT;
+    this.fsm = new StateMachine(this, fighterStates, 'idle');
+  }
+
+  get isCrouching() {
+    return this.fsm.is('crouch');
+  }
+
+  get isAirborne() {
+    return this.fsm.is('jump');
+  }
+
+  // Fighters always turn to face each other. Later milestones lock this
+  // during committed actions (attacks, hit-stun) by guarding the call site.
+  updateFacing(opponent) {
+    this.facing = opponent.x >= this.x ? 1 : -1;
+  }
+
+  update(dt, input, opponent) {
+    this.updateFacing(opponent);
+    this.fsm.update(dt, input);
+
+    this.height = this.isCrouching ? FIGHTER.CROUCH_HEIGHT : FIGHTER.STAND_HEIGHT;
+
+    this.x += this.vx * dt;
+    this.x = clamp(this.x, STAGE.LEFT_WALL + this.width / 2, STAGE.RIGHT_WALL - this.width / 2);
+  }
+
+  draw(ctx) {
+    const top = this.y - this.height;
+
+    ctx.fillStyle = this.color;
+    ctx.fillRect(this.x - this.width / 2, top, this.width, this.height);
+
+    // Nose triangle so facing direction reads clearly on a plain box.
+    ctx.fillStyle = '#fff';
+    const noseX = this.x + this.facing * (this.width / 2);
+    ctx.beginPath();
+    ctx.moveTo(noseX, top + 20);
+    ctx.lineTo(noseX - this.facing * 14, top + 12);
+    ctx.lineTo(noseX - this.facing * 14, top + 28);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.fillStyle = '#aaa';
+    ctx.font = '12px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText(`${this.label} [${this.fsm.current}]`, this.x, top - 8);
+  }
+}
