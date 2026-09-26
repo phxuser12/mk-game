@@ -8,8 +8,8 @@ button-combo fighters, nothing copyrighted reused.
 generation in a condemned steel-mill city, run by a shadow syndicate. Win
 the circuit or don't leave it.
 
-**Roster**: **Krug** (P1) — a broad-shouldered foundry brawler in a helmet
-and rust-red apron. **Vesper** (P2) — a leaner, hooded scrapper in a blue
+**Roster**: **Emil** (P1) — a broad-shouldered foundry brawler in a helmet
+and rust-red apron. **Aleks** (P2) — a leaner, hooded scrapper in a blue
 wrap. Both currently share the exact same moveset/frame data (see
 `src/characters/genericMoves.js` etc.) — only their sprite and name are
 distinct so far; per-character movesets are future work.
@@ -147,7 +147,7 @@ src/
   ui/           HUD: health bars, combo counter, round timer/pips, match banners
   debug/        hitbox/hurtbox/projectile debug overlay
 assets/
-  sprites/      krug_idle.png, vesper_idle.png — single static pose per character;
+  sprites/      emil_idle.png, aleks_idle.png — single static pose per character;
                 squash/stretch onto the existing hitbox covers crouch/knockdown for now,
                 full per-pose sprite sheets + frame data are future work
   audio/        reserved for real recorded SFX/music, once they exist
