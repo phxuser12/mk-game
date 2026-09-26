@@ -15,6 +15,9 @@ export const PHYSICS = {
   AIR_CONTROL_SPEED: 120, // px/sec, reduced horizontal control while airborne
   JUMP_VELOCITY: 620, // px/sec, initial upward speed (subtracted from vy)
   GRAVITY: 1400, // px/sec^2, applied to vy while airborne
+  RUN_SPEED: 420, // px/sec, dedicated Run button's dash speed
+  RUN_DURATION_FRAMES: 14, // ticks the dash lasts before returning to idle
+  KNOCKBACK_FRICTION: 0.85, // per-tick velocity decay while in hit-stun/block-stun
 };
 
 export const FIGHTER = {

@@ -1,6 +1,6 @@
 // Keyboard input for local 2-player. P1 uses WASD + FGHJ, P2 uses Arrow keys
-// + a numpad cluster. Attack buttons (hp/lp/hk/lk) are read out here already
-// even though nothing consumes them until Milestone 2+.
+// + a numpad cluster. Low Punch/High Kick/Low Kick are read out here already
+// even though nothing consumes them until Milestone 4's full moveset.
 
 const KEY_BINDINGS = {
   p1: {
@@ -12,6 +12,8 @@ const KEY_BINDINGS = {
     lp: 'KeyG',
     hk: 'KeyH',
     lk: 'KeyJ',
+    block: 'Space',
+    run: 'ShiftLeft',
   },
   p2: {
     left: 'ArrowLeft',
@@ -22,6 +24,8 @@ const KEY_BINDINGS = {
     lp: 'Numpad5',
     hk: 'Numpad6',
     lk: 'Numpad2',
+    block: 'Numpad0',
+    run: 'NumpadEnter',
   },
 };
 
@@ -67,6 +71,8 @@ export class InputManager {
       lpPressed: this.justPressed.has(b.lp),
       hkPressed: this.justPressed.has(b.hk),
       lkPressed: this.justPressed.has(b.lk),
+      block: this.pressed.has(b.block), // held stance, not an edge-triggered press
+      runPressed: this.justPressed.has(b.run),
     };
   }
 

@@ -20,6 +20,8 @@ export class Fighter {
     this.activeMove = null; // set while attacking; read by combat.js for hitbox data
     this.attackFrame = 0;
     this.currentAttackHasHit = false;
+    this.runFrame = 0;
+    this.stunFrames = 0; // ticks remaining in hitStun/blockStun, set by combat.js
 
     this.fsm = new StateMachine(this, fighterStates, 'idle');
   }

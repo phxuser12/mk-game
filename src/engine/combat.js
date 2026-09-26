@@ -1,9 +1,14 @@
 // Hitbox/hurtbox collision: a fighter's hurtbox is just its body rect; its
 // hitbox only exists while its active move is in the "active" frame window.
-// resolveAttacks() is called once per tick and checks both directions, so
-// simultaneous attacks can trade.
+//
+// resolveAttacks() is split into a compute phase (pure reads) and an apply
+// phase (mutations) so simultaneous attacks trade fairly. If we mutated as
+// we went, resolving A-hits-B first could transition B out of 'attacking'
+// (clearing its hitbox via that state's exit hook) before B-hits-A was even
+// checked, silently cancelling one side of every trade.
 
-const HIT_STOP_FRAMES = 8; // ticks both fighters freeze for on a landed hit, for impact feel
+const HIT_STOP_FRAMES = 8; // ticks both fighters freeze on a clean hit
+const BLOCK_STOP_FRAMES = 4; // shorter freeze on a blocked hit
 
 export function getHurtbox(f) {
   return { x: f.x - f.width / 2, y: f.y - f.height, width: f.width, height: f.height };
@@ -29,19 +34,47 @@ function overlaps(a, b) {
   return a.x < b.x + b.width && a.x + a.width > b.x && a.y < b.y + b.height && a.y + a.height > b.y;
 }
 
-// Returns the number of hit-stop ticks to apply this frame (0 if nothing landed).
-export function resolveAttacks(a, b) {
-  return Math.max(resolveOneWay(a, b), resolveOneWay(b, a));
+function isBlocking(defender, move) {
+  return move.low ? defender.fsm.is('crouchBlock') : defender.fsm.is('standingBlock');
 }
 
-function resolveOneWay(attacker, defender) {
-  if (attacker.currentAttackHasHit) return 0; // one hit per swing, even across several active frames
-
+// Pure: figures out whether attacker's hitbox currently lands on defender,
+// and whether defender is guarding correctly against it. No side effects.
+function computeHit(attacker, defender) {
+  if (attacker.currentAttackHasHit) return null;
   const hitbox = getActiveHitbox(attacker);
-  if (!hitbox || !overlaps(hitbox, getHurtbox(defender))) return 0;
+  if (!hitbox || !overlaps(hitbox, getHurtbox(defender))) return null;
+  return { move: attacker.activeMove, blocked: isBlocking(defender, attacker.activeMove) };
+}
 
-  defender.health = Math.max(0, defender.health - attacker.activeMove.damage);
-  defender.hitFlashFrames = 6;
+// Mutates attacker (marks its swing resolved) and defender (damage, knockback, stun state).
+function applyHit(attacker, defender, { move, blocked }) {
   attacker.currentAttackHasHit = true;
+  const knockback = (blocked ? move.chipKnockback : move.knockback) * attacker.facing;
+  defender.vx = knockback;
+
+  if (blocked) {
+    defender.health = Math.max(1, defender.health - move.chipDamage); // chip alone can't finish a round
+    defender.hitFlashFrames = 3;
+    defender.stunFrames = move.blockStunFrames;
+    defender.fsm.transition('blockStun');
+    return BLOCK_STOP_FRAMES;
+  }
+
+  defender.health = Math.max(0, defender.health - move.damage);
+  defender.hitFlashFrames = 6;
+  defender.stunFrames = move.hitStunFrames;
+  defender.fsm.transition('hitStun');
   return HIT_STOP_FRAMES;
+}
+
+// Returns the number of hit-stop ticks to apply this frame (0 if nothing landed).
+export function resolveAttacks(a, b) {
+  const hitOnB = computeHit(a, b);
+  const hitOnA = computeHit(b, a);
+
+  let hitStop = 0;
+  if (hitOnB) hitStop = Math.max(hitStop, applyHit(a, b, hitOnB));
+  if (hitOnA) hitStop = Math.max(hitStop, applyHit(b, a, hitOnA));
+  return hitStop;
 }

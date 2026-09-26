@@ -23,7 +23,7 @@ npx serve .
 
 Then open `http://localhost:8000` (or whatever port it prints).
 
-## Controls (Milestone 2)
+## Controls (Milestone 3)
 
 | Action | P1 | P2 |
 | --- | --- | --- |
@@ -31,6 +31,13 @@ Then open `http://localhost:8000` (or whatever port it prints).
 | Crouch | S | Down |
 | Jump | W | Up |
 | High Punch (attack) | F | Numpad 4 |
+| Block (hold) | Space | Numpad 0 |
+| Run (dash) | Left Shift | Numpad Enter |
+
+Hold Block standing to guard high attacks, or Block+Down to crouch-guard low
+attacks — the current single move (High Punch) hits high, so crouch-blocking
+it does nothing and it still connects, which is the intended overhead rule.
+Blocking chips 2 damage and can't finish a round on its own (floors at 1 HP).
 
 Low Punch/High Kick/Low Kick (P1: G/H/J, P2: Numpad 5/6/2) are wired into
 input reading already but don't do anything until Milestone 4's full moveset.

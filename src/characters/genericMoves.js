@@ -11,7 +11,13 @@ export const GENERIC_MOVES = {
     startup: 6, // frames before the hitbox exists
     active: 4, // frames the hitbox can land a hit
     recovery: 10, // frames after active before control returns
+    low: false, // hits high: beaten by standing block, goes over crouch block
     damage: 8,
+    chipDamage: 2, // damage dealt when blocked; can't drop health below 1
+    hitStunFrames: 14,
+    blockStunFrames: 8,
+    knockback: 260, // px/sec pushback on a clean hit
+    chipKnockback: 80, // px/sec pushback on a blocked hit
     hitbox: { offsetY: 100, width: 45, height: 20 },
   },
 };
