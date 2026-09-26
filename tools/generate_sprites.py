@@ -24,7 +24,11 @@ SPRITES_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "as
 
 # Poses that now have real art and must NOT be regenerated procedurally.
 REAL_ART_POSES = {
-    "burak": {"idle", "punch"},
+    "burak": {
+        "idle", "walkForward", "walkBack", "jump", "crouch", "punch",
+        "kick", "uppercut", "sweep", "special", "hitStun", "launched",
+        "knockdown",
+    },
     "aleks": set(),
 }
 

@@ -28,10 +28,11 @@ rather than each move getting its own art.
 Sprites live one folder per character (`assets/sprites/burak/`,
 `assets/sprites/aleks/`), each pose as `<pose>_<frameIndex>.png`. Frame
 count varies by pose and is tracked in `FRAME_COUNTS` in `roster.js` —
-**Burak's `idle` (4 frames) and `punch` (5 frames) are real generated art**;
-everything else on both characters is still the original procedural
-placeholder (2 frames), to be replaced pose-by-pose over time. Frames
-always restart at index 0 the instant the pose changes (so an attack's
+**all 13 of Burak's poses are now real generated art** (62 frames total,
+delivered as one sprite sheet + a JSON coordinate manifest and sliced with
+`tools/slice_sprites.py`); **Aleks is still the original procedural
+placeholder** (2 frames per pose), to be replaced the same way once art
+arrives for him. Frames always restart at index 0 the instant the pose changes (so an attack's
 wind-up frame never starts mid-cycle). While attacking, the frame shown is
 mapped onto the move's own startup/active/recovery progress rather than a
 flat timer, so a move's frames are guaranteed to all be seen exactly once
@@ -184,16 +185,22 @@ assets/
   sprites/
     burak/       one folder per character. <pose>_<frameIndex>.png per file;
     aleks/      frame count varies by pose (see FRAME_COUNTS in roster.js).
-                Burak's idle/punch are real generated art; everything else on
-                both characters is still the procedural placeholder. A
-                packed sprite sheet + JSON frame data is still future work.
+                All 13 of Burak's poses are real generated art (delivered as
+                a sheet + JSON manifest); Aleks is still the procedural
+                placeholder, pending the same treatment.
   audio/        reserved for real recorded SFX/music, once they exist
 tools/
-  generate_sprites.py   regenerates PROCEDURAL PLACEHOLDER sprites into
-                        assets/sprites/<character>/ (Pillow; a one-off
-                        authoring dependency, not a runtime one). Skips any
-                        pose listed in REAL_ART_POSES so it never overwrites
-                        real art.
+  generate_sprites.py    regenerates PROCEDURAL PLACEHOLDER sprites into
+                         assets/sprites/<character>/ (Pillow; a one-off
+                         authoring dependency, not a runtime one). Skips any
+                         pose listed in REAL_ART_POSES so it never overwrites
+                         real art.
+  slice_sprites.py       slices a REAL ART sheet into per-frame files using
+                         a JSON coordinate manifest (--skip to drop bad/
+                         contaminated crops, --rename to renumber frames
+                         after a drop so indices stay contiguous).
+  sprite_generation_brief.md   the brief sent to external AI tools/models to
+                         generate a character's sheet + manifest.
 ```
 
 Character visuals/movesets are meant to be data-driven (sprite sheet + frame

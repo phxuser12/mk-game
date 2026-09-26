@@ -12,8 +12,23 @@
 // Fighter reads each sprite's own natural dimensions at draw time.
 const FRAME_COUNTS = {
   burak: {
-    idle: 4, // real generated art
-    punch: 5, // real generated art
+    // all real generated art, from a sheet+manifest batch (see
+    // tools/slice_sprites.py) — jump and walkBack are one frame short of
+    // the brief's recommendation because 2 of the delivered crops
+    // (walkBack_5, jump_2) were misaligned/contaminated and were dropped.
+    idle: 4,
+    walkForward: 6,
+    walkBack: 5,
+    jump: 3,
+    crouch: 3,
+    punch: 5,
+    kick: 6,
+    uppercut: 6,
+    sweep: 5,
+    special: 7,
+    hitStun: 3,
+    launched: 5,
+    knockdown: 4,
   },
   aleks: {},
 };

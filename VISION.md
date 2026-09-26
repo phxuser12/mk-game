@@ -147,17 +147,21 @@ behind each stage:
      Punch's 20-tick total duration. Fixed by mapping attack-pose frames
      onto the move's own startup+active+recovery progress instead of a
      flat timer. Full detail in §4.
-  6. **Current state**: a second real-art batch was attempted (all 13
-     poses, sized to an irregular-per-pose brief) but failed QA — roughly
-     half the poses had visible duplicate/ghosted figures and baked-in
-     filename text, apparently from a mis-cropped contact-sheet pipeline.
-     Caught by building a per-pose contact sheet and visually reviewing
-     every frame before integrating anything; nothing from that batch was
-     integrated. The delivery format was changed as a result: future
-     batches come as one sheet image + a JSON coordinate manifest (bounding
-     box per sprite), sliced on this end instead of relying on an external
-     auto-crop step. See §4's "generation brief" note for the current brief
-     text (height capped at 200px, width irregular per pose).
+  6. A second real-art batch was attempted (all 13 poses, individually
+     exported files) but failed QA — roughly half the poses had visible
+     duplicate/ghosted figures and baked-in filename text, apparently from a
+     mis-cropped contact-sheet pipeline. Caught by building a per-pose
+     contact sheet and visually reviewing every frame before integrating
+     anything; nothing from that batch was integrated. The delivery format
+     was changed as a result: batches now come as one sheet image + a JSON
+     coordinate manifest (bounding box per sprite), sliced on this end
+     instead of relying on an external auto-crop step.
+  7. **Current state**: a third batch, using the new sheet+manifest
+     workflow, succeeded — all 13 of Burak's poses are now real generated
+     art (62 frames, via `tools/slice_sprites.py`). 2 of the manifest's 64
+     declared crops (`walkBack_5`, `jump_2`) were misaligned/fragmented and
+     dropped; everything else was clean. See §4 for full detail. Aleks is
+     still the original procedural placeholder throughout.
 - **Character rename: Emil → Burak.** Purely cosmetic — name, `ROSTER` key,
   and the `assets/sprites/` folder name all changed; no behavior, palette,
   or art changed. If anything in git history, old filenames, or an old copy
@@ -276,11 +280,10 @@ arriving character-by-character and pose-by-pose rather than all at once.
 `FRAME_COUNTS` map tracks how many frames actually exist for each
 pose/character pair; anything not listed defaults to 2 (the original
 procedural placeholder count). `buildSprites()` generates the actual path
-arrays from that count. **As of now**: Burak's `idle` has 4 frames and
-`punch` has 5 — both **real generated art** (see the generation brief
-described below), replacing what used to be 2-frame procedural placeholders
-for those two poses specifically. Every other pose on both characters is
-still the original procedural placeholder, at 2 frames.
+arrays from that count. **As of now**: all 13 of Burak's poses are **real
+generated art** (62 frames total — see the generation brief described
+below), replacing every procedural placeholder he had. Aleks is still fully
+the original procedural placeholder, at 2 frames per pose.
 
 ### Procedural placeholder art (everything not yet replaced)
 
@@ -311,26 +314,52 @@ true for whatever it still generates:
   "settle/twitch" second frame).
 - `REAL_ART_POSES` at the top of the script lists which poses to SKIP
   generating, per character, because real art now exists there — currently
-  `{"burak": {"idle", "punch"}, "aleks": set()}`. **Update this set whenever
+  all 13 for `"burak"` (so the script now skips Burak entirely and only
+  still generates Aleks), `set()` for `"aleks"`. **Update this set whenever
   more real art lands**, so re-running the script never overwrites it.
 
-### Real art: the generation brief
+### Real art: the generation brief, and the sheet+manifest workflow
 
-Real frames are being sourced from external AI image generators/agents,
-fed a detailed written brief (character identity + exact hex palette + art
+Real frames are sourced from external AI image generators/agents, fed a
+detailed written brief (character identity + exact hex palette + art
 direction + technical spec + a per-pose frame-count/motion-progression
-table + delivery/naming format). That brief was written once, in
-conversation, for Burak, and is trivially adaptable to Aleks (only the
-identity/palette paragraph changes). It's not currently saved as a file in
-this repo — **if it's needed again, ask for it to be regenerated, or better,
-save it into the repo (e.g. `tools/sprite_generation_brief.md`) next time
-it's produced**, so it isn't a one-off lost to chat history the way the
-sprite generator script almost was (§2's post-milestone notes).
+table + delivery/naming format). The brief is now saved in the repo at
+`tools/sprite_generation_brief.md` (previously it only lived in chat history
+— that was flagged as a gap and fixed).
 
-Recommended frame counts reasoned out per pose in that brief (a starting
-point, not a rule — actual counts can and do vary, e.g. idle shipped with 4,
-punch with 5): idle 4, walkForward/walkBack 6, jump 4, crouch 3, punch 5,
-kick 6, uppercut 6, sweep 5, special 7, hitStun 3, launched 5, knockdown 4.
+**Delivery format** (settled after one earlier failed attempt — see §2's
+"five iterations" list, item 6): individually-exported per-frame files
+turned out unreliable — an external tool's own auto-crop step produced
+duplicate/ghosted figures and baked-in filename text on several poses. The
+fix: the brief now asks for one combined **sprite sheet image** (arbitrary
+packed layout, transparent background, sprites isolated by 30-50px gutters,
+no baked-in text/labels/gridlines) plus a **JSON coordinate manifest**
+(`{"<pose>_<frameIndex>": {"x","y","width","height"}, ...}`), and cropping
+happens on this end with `tools/slice_sprites.py` instead of trusting
+whatever the generation tool's own export step does. Sprite height is
+capped at ~200px; width is intentionally irregular per pose (a kick is much
+wider than a walk).
+
+**This workflow was used successfully for Burak's full 13-pose batch.** Of
+the manifest's 64 declared crops, 62 were clean; 2 (`walkBack_5`, `jump_2`)
+had manifest coordinates that landed on the gap/boundary between two
+neighboring figures on the sheet rather than on a full pose, producing
+sliver/fragment crops. Caught the same way as the previous batch's
+contamination — building a per-pose contact sheet from the actual crops and
+reviewing every frame before touching `assets/sprites/`. Rather than reject
+the whole batch (as happened last time, when roughly half the poses were
+bad), the 2 bad crops were dropped and `walkForward_3`/`jump_3` (the next
+good frame after each gap) were renumbered down to keep frame indices
+contiguous, via `slice_sprites.py --skip ... --rename jump_3=jump_2`. Net
+result: `walkBack` has 5 frames and `jump` has 3 instead of the brief's
+recommended 6 and 4 — one frame short in each case, not a quality problem.
+
+Recommended frame counts reasoned out per pose in the brief (a starting
+point, not a rule — actual delivered counts can and do vary, per the above):
+idle 4, walkForward/walkBack 6, jump 4, crouch 3, punch 5, kick 6, uppercut
+6, sweep 5, special 7, hitStun 3, launched 5, knockdown 4. Burak's actual
+counts: idle 4, walkForward 6, walkBack 5, jump 3, crouch 3, punch 5, kick
+6, uppercut 6, sweep 5, special 7, hitStun 3, launched 5, knockdown 4.
 
 ### Fighter animation state (`src/entities/fighter.js`)
 
@@ -374,18 +403,23 @@ SPRITE_SCALE` (currently `0.74`), anchored bottom-center at the fighter's
 actual `(x, y)`. This is independent of the collision hurtbox (`this.height`,
 still a fixed value per state for gameplay purposes) — the two systems don't
 need to agree, and don't currently. This also means procedural placeholder
-art and real art can have wildly different native pixel dimensions (the real
-Burak frames are a uniform 150×200; procedural poses vary per pose) and still
+art and real art can have wildly different native pixel dimensions — Burak's
+real frames are irregular per pose (height ~200px, width free-varying, per
+the generation brief's spec), procedural poses vary per pose too — and still
 render at consistent relative on-screen size, with zero per-pose code.
 
-**To integrate a new batch of real art** (the expected workflow going
-forward): drop the files into `assets/sprites/<character>/` as
-`<pose>_<frameIndex>.png`, update that pose's count in `FRAME_COUNTS` in
-`roster.js`, and add the pose to `REAL_ART_POSES` in
-`tools/generate_sprites.py` so the generator never overwrites it. Check
-whether the pose is duration-bound (an attack move) — if the frame count
-changed meaningfully, sanity-check that `updateAnimation()`'s two rules
-(above) still make sense for it, per the bug that was just caught.
+**To integrate a new batch of real art delivered as a sheet + manifest**
+(the current expected workflow): run `tools/slice_sprites.py <sheet>
+<manifest> <character>`, reviewing a per-pose contact sheet of the actual
+crops before trusting them (per the QA process described above — don't
+skip this, it has caught real contamination twice). Use `--skip` to drop
+any bad crops and `--rename` to keep frame indices contiguous afterward.
+Then update that pose's count in `FRAME_COUNTS` in `roster.js`, and add the
+pose to `REAL_ART_POSES` in `tools/generate_sprites.py` so the procedural
+generator never overwrites it. Check whether the pose is duration-bound (an
+attack move) — if the frame count changed meaningfully, sanity-check that
+`updateAnimation()`'s two rules (above) still make sense for it, per the bug
+that was caught the first time real art landed.
 
 **To add or change PROCEDURAL placeholder sprites**: edit
 `tools/generate_sprites.py` and re-run `python3 tools/generate_sprites.py`
@@ -413,11 +447,12 @@ they aren't "discovered" as bugs later:
 - **Both characters are mechanically identical.** Same moveset, same combo
   string, same special, same finishers — only cosmetics differ. Real
   per-character movesets are a distinct future project, not a small tweak.
-- **No packed sprite sheet / JSON frame data yet** — one separate PNG file
-  per pose+frame, growing over time as real art replaces placeholders
-  (Burak alone is already at 31 files across 13 poses with mixed frame
-  counts). Fine at this scale; would want packing if the roster or pose/
-  frame counts grow much further.
+- **No packed sprite sheet / JSON frame data at runtime** — real art now
+  *arrives* as a sheet + manifest, but `tools/slice_sprites.py` slices it
+  into one separate PNG file per pose+frame before the game ever loads it
+  (Burak alone is already 62 files across 13 poses with mixed frame counts).
+  Fine at this scale; would want the game itself to load a packed sheet
+  directly if the roster or pose/frame counts grow much further.
 - **Non-attack poses share one animation frame rate** (`ANIM_FRAME_TICKS`)
   — attack poses no longer do (see §4's duration-mapping fix), but idle/
   walk/jump/crouch/hitStun/launched/knockdown all still advance at the same
@@ -431,10 +466,9 @@ they aren't "discovered" as bugs later:
   Burak vs. Aleks.
 - **No real recorded audio yet** — all sound is synthesized (Web Audio).
   This was explicitly permitted/expected by the original brief, not a
-  shortfall. **Art is a partial exception**: Burak's `idle`/`punch` are real
-  generated art now; everything else on both characters is still
-  procedurally generated (Pillow rectangles), being replaced incrementally
-  (§4).
+  shortfall. **Art is a partial exception**: all 13 of Burak's poses are now
+  real generated art; Aleks is still fully procedurally generated (Pillow
+  rectangles), pending the same sheet+manifest treatment (§4).
 - **The AI is intentionally weak** — per the brief's own words, "doesn't
   need to be advanced." Don't "fix" its imperfect block-guessing without
   being asked; that's a feature, not a bug.
@@ -496,16 +530,18 @@ than once:
 
 Nothing here is committed to — this is a menu, not a roadmap promise.
 
-1. **Keep replacing procedural placeholder art with real art**, in
-   progress: Burak has real `idle`/`punch`; 11 more Burak poses and all 13
-   Aleks poses are still procedural. Each new batch needs: files dropped
-   into `assets/sprites/<character>/`, `FRAME_COUNTS` updated in
-   `roster.js`, the pose added to `REAL_ART_POSES` in
-   `generate_sprites.py`, and (if it's an attack pose) a sanity-check that
-   the duration-mapping animation logic in §4 still makes sense for it.
-   Also worth doing soon: save the sprite-generation brief itself into the
-   repo (e.g. `tools/sprite_generation_brief.md`) rather than re-deriving it
-   from chat each time — see §4's note.
+1. **Keep replacing procedural placeholder art with real art**: Burak is
+   fully real art now (13/13 poses); all 13 Aleks poses are still
+   procedural. Use the same sheet+manifest workflow (`tools/
+   sprite_generation_brief.md` + `tools/slice_sprites.py`) — swap the
+   identity/palette paragraph in the brief for Aleks and send it out. Each
+   new batch needs: slice with `--skip`/`--rename` after a contact-sheet QA
+   pass, `FRAME_COUNTS` updated in `roster.js`, the pose added to
+   `REAL_ART_POSES` in `generate_sprites.py`, and (if it's an attack pose) a
+   sanity-check that the duration-mapping animation logic in §4 still makes
+   sense for it. Also worth revisiting: `walkBack` and `jump` are one frame
+   short of the brief's own recommendation (5 vs. 6, 3 vs. 4) because of the
+   2 dropped crops — a touch-up batch could fill just those two gaps.
 2. **Per-character distinct movesets** — give Burak and Aleks their own
    normals/specials/finishers instead of sharing everything. The data
    structures already support this (`ROSTER` entries could point at
