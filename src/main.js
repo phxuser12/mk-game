@@ -6,6 +6,7 @@ import { Fighter } from './entities/fighter.js';
 import { STAGE } from './engine/constants.js';
 import { drawStage } from './stage/stage.js';
 import { drawHealthBars } from './ui/healthBar.js';
+import { drawComboCounters } from './ui/comboCounter.js';
 import { drawDebugOverlay } from './debug/debugDraw.js';
 
 const canvas = document.getElementById('game');
@@ -44,6 +45,7 @@ function render() {
   p1.draw(ctx);
   p2.draw(ctx);
   drawHealthBars(ctx, p1, p2);
+  drawComboCounters(ctx, p1, p2);
   if (debugEnabled) drawDebugOverlay(ctx, [p1, p2]);
 }
 

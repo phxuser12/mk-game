@@ -7,6 +7,8 @@
 // (clearing its hitbox via that state's exit hook) before B-hits-A was even
 // checked, silently cancelling one side of every trade.
 
+import { COMBAT } from './constants.js';
+
 const HIT_STOP_FRAMES = 8; // ticks both fighters freeze on a clean hit
 const BLOCK_STOP_FRAMES = 4; // shorter freeze on a blocked hit
 
@@ -63,8 +65,25 @@ function applyHit(attacker, defender, { move, blocked }) {
 
   defender.health = Math.max(0, defender.health - move.damage);
   defender.hitFlashFrames = 6;
-  defender.stunFrames = move.hitStunFrames;
-  defender.fsm.transition('hitStun');
+
+  attacker.comboHitCount += 1;
+  attacker.comboDamage += move.damage;
+  attacker.comboDisplayFrames = COMBAT.COMBO_DISPLAY_FRAMES;
+
+  switch (move.onHit) {
+    case 'launch':
+      defender.vy = -move.launchVelocity;
+      defender.fsm.transition('launched');
+      break;
+    case 'knockdown':
+      defender.knockdownFrames = COMBAT.KNOCKDOWN_FRAMES;
+      defender.fsm.transition('knockdown');
+      break;
+    default:
+      defender.stunFrames = move.hitStunFrames;
+      defender.fsm.transition('hitStun');
+  }
+
   return HIT_STOP_FRAMES;
 }
 

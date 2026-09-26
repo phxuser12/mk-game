@@ -22,6 +22,14 @@ export class Fighter {
     this.currentAttackHasHit = false;
     this.runFrame = 0;
     this.stunFrames = 0; // ticks remaining in hitStun/blockStun, set by combat.js
+    this.knockdownFrames = 0;
+    this.gettingUpFrames = 0;
+
+    this.pendingMoveKey = null; // which move 'attacking'.enter() should start, set by the caller before transitioning
+    this.comboIndex = null; // position in the combo string while chaining, or null outside a chain attempt
+    this.comboHitCount = 0;
+    this.comboDamage = 0;
+    this.comboDisplayFrames = 0; // ticks left to show the combo counter UI after the last hit
 
     this.fsm = new StateMachine(this, fighterStates, 'idle');
   }
@@ -49,12 +57,15 @@ export class Fighter {
     this.updateFacing(opponent);
     this.fsm.update(dt, input);
 
-    this.height = this.isCrouching ? FIGHTER.CROUCH_HEIGHT : FIGHTER.STAND_HEIGHT;
+    if (this.isCrouching) this.height = FIGHTER.CROUCH_HEIGHT;
+    else if (this.fsm.is('knockdown')) this.height = FIGHTER.KNOCKDOWN_HEIGHT;
+    else this.height = FIGHTER.STAND_HEIGHT;
 
     this.x += this.vx * dt;
     this.x = clamp(this.x, STAGE.LEFT_WALL + this.width / 2, STAGE.RIGHT_WALL - this.width / 2);
 
     if (this.hitFlashFrames > 0) this.hitFlashFrames -= 1;
+    if (this.comboDisplayFrames > 0) this.comboDisplayFrames -= 1;
   }
 
   draw(ctx) {

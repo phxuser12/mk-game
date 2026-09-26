@@ -24,4 +24,11 @@ export const FIGHTER = {
   STAND_WIDTH: 60,
   STAND_HEIGHT: 140,
   CROUCH_HEIGHT: 90,
+  KNOCKDOWN_HEIGHT: 30, // flattened placeholder-box height while lying down
+};
+
+export const COMBAT = {
+  KNOCKDOWN_FRAMES: 30, // ticks lying down before getting-up starts
+  GETTING_UP_FRAMES: 20, // ticks of vulnerable recovery before idle
+  COMBO_DISPLAY_FRAMES: 90, // how long the combo counter UI lingers after the last hit
 };

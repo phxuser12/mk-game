@@ -9,8 +9,11 @@
 //   crouch        -> idle                   on down released
 //   idle/walk     -> jump                   on up pressed (grounded only)
 //   jump          -> idle                   on landing (y reaches ground, vy >= 0)
-//   idle/walk     -> attacking              on attack button pressed (grounded only)
+//   idle/walk     -> attacking              on any of HP/LP/HK/LK pressed (grounded only)
+//   crouch        -> attacking (uppercut)   on HP pressed
+//   crouch        -> attacking (sweep)      on HK pressed
 //   attacking     -> idle                   once startup+active+recovery frames elapse
+//   attacking     -> attacking (chained)    on the next combo-string button, during recovery
 //   idle/walk     -> running                on run button pressed (grounded only)
 //   running       -> idle                   once the dash's fixed duration elapses
 //   idle/walk/crouch -> standingBlock/crouchBlock  on block held (down decides which guard)
@@ -18,21 +21,55 @@
 //   */block       -> idle/crouch            on block released
 //   (any)         -> hitStun/blockStun      on combat.js resolving a landed/blocked hit
 //   hitStun/blockStun -> idle               once stunFrames (set by combat.js) elapses
+//   (any, clean uppercut) -> launched       airborne, no input, until landing
+//   launched      -> knockdown              on landing
+//   (any, clean sweep) -> knockdown         directly, no air launch
+//   knockdown     -> gettingUp -> idle      timed, no input in either state
 //
 // attacking and running are not interruptible by input (no movement, jumping,
 // blocking, or re-triggering) until they finish on their own — but combat.js
-// can still force a transition into hitStun/blockStun out of ANY state, since
-// getting hit interrupts everything. Known limitation: a fighter hit while
-// airborne snaps back to idle at ground level rather than falling first;
-// proper airborne-hitstun/juggling arrives with Milestone 5.
+// can still force a transition out of ANY state into hitStun/blockStun/
+// launched/knockdown, since getting hit interrupts everything. Known
+// limitation: a fighter hit while airborne from a jump snaps to ground level
+// rather than falling first; proper airborne-hitstun is Milestone 5 territory.
 
-import { STAGE, PHYSICS } from '../engine/constants.js';
+import { STAGE, PHYSICS, COMBAT } from '../engine/constants.js';
 import { GENERIC_MOVES } from '../characters/genericMoves.js';
+import { GENERIC_COMBO } from '../characters/genericCombo.js';
+import { UNIVERSAL_MOVES } from '../engine/universalMoves.js';
+
+const MOVES = { ...GENERIC_MOVES, ...UNIVERSAL_MOVES };
+
+// Priority order when multiple attack buttons land on the same tick.
+const INPUT_FLAG_BY_MOVE = {
+  highPunch: 'hpPressed',
+  lowPunch: 'lpPressed',
+  highKick: 'hkPressed',
+  lowKick: 'lkPressed',
+};
+const NORMAL_KEYS_IN_PRIORITY = ['highPunch', 'lowPunch', 'highKick', 'lowKick'];
+
+function pickPressedNormal(input) {
+  for (const key of NORMAL_KEYS_IN_PRIORITY) {
+    if (input[INPUT_FLAG_BY_MOVE[key]]) return key;
+  }
+  return null;
+}
 
 function readMoveDir(input) {
   const left = input.left ? -1 : 0;
   const right = input.right ? 1 : 0;
   return left + right;
+}
+
+// Resets the attacking state's per-swing fields for `moveKey` WITHOUT going
+// through fsm.transition — used both to enter 'attacking' fresh and to
+// cancel straight into the next hit of a combo string while already there.
+function startAttack(f, moveKey) {
+  f.vx = 0;
+  f.attackFrame = 0;
+  f.currentAttackHasHit = false;
+  f.activeMove = MOVES[moveKey];
 }
 
 // hitStun and blockStun share behavior: slide to a stop over stunFrames
@@ -56,7 +93,11 @@ export const fighterStates = {
       f.vx = 0;
     },
     update(f, dt, input) {
-      if (input.hpPressed) return f.fsm.transition('attacking');
+      const pressedMove = pickPressedNormal(input);
+      if (pressedMove) {
+        f.pendingMoveKey = pressedMove;
+        return f.fsm.transition('attacking');
+      }
       if (input.runPressed) return f.fsm.transition('running');
       if (input.block) return f.fsm.transition(input.down ? 'crouchBlock' : 'standingBlock');
       if (input.jumpPressed) return f.fsm.transition('jump');
@@ -70,7 +111,11 @@ export const fighterStates = {
 
   walkForward: {
     update(f, dt, input) {
-      if (input.hpPressed) return f.fsm.transition('attacking');
+      const pressedMove = pickPressedNormal(input);
+      if (pressedMove) {
+        f.pendingMoveKey = pressedMove;
+        return f.fsm.transition('attacking');
+      }
       if (input.runPressed) return f.fsm.transition('running');
       if (input.block) return f.fsm.transition(input.down ? 'crouchBlock' : 'standingBlock');
       if (input.jumpPressed) return f.fsm.transition('jump');
@@ -84,7 +129,11 @@ export const fighterStates = {
 
   walkBack: {
     update(f, dt, input) {
-      if (input.hpPressed) return f.fsm.transition('attacking');
+      const pressedMove = pickPressedNormal(input);
+      if (pressedMove) {
+        f.pendingMoveKey = pressedMove;
+        return f.fsm.transition('attacking');
+      }
       if (input.runPressed) return f.fsm.transition('running');
       if (input.block) return f.fsm.transition(input.down ? 'crouchBlock' : 'standingBlock');
       if (input.jumpPressed) return f.fsm.transition('jump');
@@ -101,6 +150,14 @@ export const fighterStates = {
       f.vx = 0;
     },
     update(f, dt, input) {
+      if (input.hpPressed) {
+        f.pendingMoveKey = 'uppercut';
+        return f.fsm.transition('attacking');
+      }
+      if (input.hkPressed) {
+        f.pendingMoveKey = 'sweep';
+        return f.fsm.transition('attacking');
+      }
       if (input.block) return f.fsm.transition('crouchBlock');
       if (!input.down) f.fsm.transition('idle');
     },
@@ -125,16 +182,33 @@ export const fighterStates = {
 
   attacking: {
     enter(f) {
-      f.vx = 0; // rooted for this milestone's single normal; movement normals arrive later
-      f.attackFrame = 0;
-      f.currentAttackHasHit = false;
-      f.activeMove = GENERIC_MOVES.highPunch;
+      startAttack(f, f.pendingMoveKey);
+      // Only tracked as a combo attempt if it opens with the string's first move.
+      f.comboIndex = f.pendingMoveKey === GENERIC_COMBO[0] ? 0 : null;
+      f.comboHitCount = 0;
+      f.comboDamage = 0;
     },
-    update(f) {
+    update(f, dt, input) {
       f.attackFrame += 1;
-      const total = f.activeMove.startup + f.activeMove.active + f.activeMove.recovery;
-      if (f.attackFrame >= total) {
+      const move = f.activeMove;
+      const activeEnd = move.startup + move.active;
+      const totalFrames = activeEnd + move.recovery;
+
+      // Chain-cancel window: anywhere during recovery, the correct next
+      // button in the combo string skips the rest of recovery and starts
+      // the next hit immediately.
+      if (f.comboIndex !== null && f.attackFrame > activeEnd && f.attackFrame <= totalFrames) {
+        const nextKey = GENERIC_COMBO[f.comboIndex + 1];
+        if (nextKey && input[INPUT_FLAG_BY_MOVE[nextKey]]) {
+          f.comboIndex += 1;
+          startAttack(f, nextKey);
+          return;
+        }
+      }
+
+      if (f.attackFrame >= totalFrames) {
         f.activeMove = null;
+        f.comboIndex = null; // chain not continued in time; drop it
         f.fsm.transition('idle');
       }
     },
@@ -179,4 +253,42 @@ export const fighterStates = {
 
   hitStun: stunState,
   blockStun: stunState,
+
+  // Airborne after a clean uppercut: gravity-driven, no player input, until
+  // landing hands off to knockdown.
+  launched: {
+    update(f, dt) {
+      f.vy += PHYSICS.GRAVITY * dt;
+      f.y += f.vy * dt;
+      f.vx *= PHYSICS.KNOCKBACK_FRICTION;
+
+      if (f.y >= STAGE.GROUND_Y && f.vy >= 0) {
+        f.y = STAGE.GROUND_Y;
+        f.vy = 0;
+        f.vx = 0;
+        f.knockdownFrames = COMBAT.KNOCKDOWN_FRAMES;
+        f.fsm.transition('knockdown');
+      }
+    },
+  },
+
+  knockdown: {
+    enter(f) {
+      f.vx = 0;
+    },
+    update(f) {
+      f.knockdownFrames -= 1;
+      if (f.knockdownFrames <= 0) {
+        f.gettingUpFrames = COMBAT.GETTING_UP_FRAMES;
+        f.fsm.transition('gettingUp');
+      }
+    },
+  },
+
+  gettingUp: {
+    update(f) {
+      f.gettingUpFrames -= 1;
+      if (f.gettingUpFrames <= 0) f.fsm.transition('idle');
+    },
+  },
 };
