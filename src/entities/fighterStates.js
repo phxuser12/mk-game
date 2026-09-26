@@ -12,6 +12,7 @@
 //   idle/walk     -> attacking              on any of HP/LP/HK/LK pressed (grounded only)
 //   crouch        -> attacking (uppercut)   on HP pressed
 //   crouch        -> attacking (sweep)      on HK pressed
+//   idle/walk     -> attacking (special)    on a special's motion+button matching the MotionBuffer
 //   attacking     -> idle                   once startup+active+recovery frames elapse
 //   attacking     -> attacking (chained)    on the next combo-string button, during recovery
 //   idle/walk     -> running                on run button pressed (grounded only)
@@ -25,20 +26,23 @@
 //   launched      -> knockdown              on landing
 //   (any, clean sweep) -> knockdown         directly, no air launch
 //   knockdown     -> gettingUp -> idle      timed, no input in either state
+//   launched      -> launched (refreshed)   on a follow-up clean hit landing mid-air: the juggle
 //
 // attacking and running are not interruptible by input (no movement, jumping,
 // blocking, or re-triggering) until they finish on their own — but combat.js
 // can still force a transition out of ANY state into hitStun/blockStun/
 // launched/knockdown, since getting hit interrupts everything. Known
-// limitation: a fighter hit while airborne from a jump snaps to ground level
-// rather than falling first; proper airborne-hitstun is Milestone 5 territory.
+// limitation: a fighter hit while airborne from a JUMP (not launched by an
+// uppercut) snaps to ground level rather than falling first — only the
+// uppercut's own airborne state is juggle-aware so far.
 
 import { STAGE, PHYSICS, COMBAT } from '../engine/constants.js';
 import { GENERIC_MOVES } from '../characters/genericMoves.js';
 import { GENERIC_COMBO } from '../characters/genericCombo.js';
 import { UNIVERSAL_MOVES } from '../engine/universalMoves.js';
+import { GENERIC_SPECIALS } from '../characters/genericSpecials.js';
 
-const MOVES = { ...GENERIC_MOVES, ...UNIVERSAL_MOVES };
+const MOVES = { ...GENERIC_MOVES, ...UNIVERSAL_MOVES, ...GENERIC_SPECIALS };
 
 // Priority order when multiple attack buttons land on the same tick.
 const INPUT_FLAG_BY_MOVE = {
@@ -56,6 +60,17 @@ function pickPressedNormal(input) {
   return null;
 }
 
+// A special's motion+button always takes priority over a plain normal on
+// the same button (e.g. HP after back-back-forward triggers the special,
+// not a plain High Punch).
+function pickTriggeredSpecial(f, input) {
+  for (const [key, move] of Object.entries(GENERIC_SPECIALS)) {
+    const { sequence, button, maxFrames } = move.input;
+    if (input[button] && f.motionBuffer.matches(sequence, maxFrames)) return key;
+  }
+  return null;
+}
+
 function readMoveDir(input) {
   const left = input.left ? -1 : 0;
   const right = input.right ? 1 : 0;
@@ -69,6 +84,7 @@ function startAttack(f, moveKey) {
   f.vx = 0;
   f.attackFrame = 0;
   f.currentAttackHasHit = false;
+  f.projectileSpawned = false;
   f.activeMove = MOVES[moveKey];
 }
 
@@ -93,6 +109,11 @@ export const fighterStates = {
       f.vx = 0;
     },
     update(f, dt, input) {
+      const specialKey = pickTriggeredSpecial(f, input);
+      if (specialKey) {
+        f.pendingMoveKey = specialKey;
+        return f.fsm.transition('attacking');
+      }
       const pressedMove = pickPressedNormal(input);
       if (pressedMove) {
         f.pendingMoveKey = pressedMove;
@@ -111,6 +132,11 @@ export const fighterStates = {
 
   walkForward: {
     update(f, dt, input) {
+      const specialKey = pickTriggeredSpecial(f, input);
+      if (specialKey) {
+        f.pendingMoveKey = specialKey;
+        return f.fsm.transition('attacking');
+      }
       const pressedMove = pickPressedNormal(input);
       if (pressedMove) {
         f.pendingMoveKey = pressedMove;
@@ -129,6 +155,11 @@ export const fighterStates = {
 
   walkBack: {
     update(f, dt, input) {
+      const specialKey = pickTriggeredSpecial(f, input);
+      if (specialKey) {
+        f.pendingMoveKey = specialKey;
+        return f.fsm.transition('attacking');
+      }
       const pressedMove = pickPressedNormal(input);
       if (pressedMove) {
         f.pendingMoveKey = pressedMove;
@@ -193,6 +224,14 @@ export const fighterStates = {
       const move = f.activeMove;
       const activeEnd = move.startup + move.active;
       const totalFrames = activeEnd + move.recovery;
+
+      // Projectile moves hand off to a traveling entity the instant the
+      // active window opens; main.js reads pendingProjectile off the fighter
+      // and spawns it, then clears the flag.
+      if (move.projectile && !f.projectileSpawned && f.attackFrame === move.startup + 1) {
+        f.projectileSpawned = true;
+        f.pendingProjectile = { move, x: f.x, y: f.y, facing: f.facing };
+      }
 
       // Chain-cancel window: anywhere during recovery, the correct next
       // button in the combo string skips the rest of recovery and starts

@@ -20,6 +20,7 @@ export function getHurtbox(f) {
 export function getActiveHitbox(f) {
   const move = f.activeMove;
   if (!move) return null;
+  if (move.projectile) return null; // the caster's body never has a hitbox for these; the spawned Projectile does
 
   const activeStart = move.startup;
   const activeEnd = move.startup + move.active;
@@ -49,6 +50,37 @@ function computeHit(attacker, defender) {
   return { move: attacker.activeMove, blocked: isBlocking(defender, attacker.activeMove) };
 }
 
+function creditCombo(attacker, damage) {
+  attacker.comboHitCount += 1;
+  attacker.comboDamage += damage;
+  attacker.comboDisplayFrames = COMBAT.COMBO_DISPLAY_FRAMES;
+}
+
+// A clean hit landing on a target already airborne from an uppercut extends
+// the juggle (refreshed upward velocity) instead of grounding them into
+// ordinary hit-stun — this is what makes the uppercut's launch combo-able.
+// No juggle-count limiting yet; that's a future tuning knob if needed.
+function applyCleanHitEffect(defender, move) {
+  if (defender.fsm.is('launched')) {
+    defender.vy = -COMBAT.JUGGLE_POP_VELOCITY;
+    return;
+  }
+
+  switch (move.onHit) {
+    case 'launch':
+      defender.vy = -move.launchVelocity;
+      defender.fsm.transition('launched');
+      break;
+    case 'knockdown':
+      defender.knockdownFrames = COMBAT.KNOCKDOWN_FRAMES;
+      defender.fsm.transition('knockdown');
+      break;
+    default:
+      defender.stunFrames = move.hitStunFrames;
+      defender.fsm.transition('hitStun');
+  }
+}
+
 // Mutates attacker (marks its swing resolved) and defender (damage, knockback, stun state).
 function applyHit(attacker, defender, { move, blocked }) {
   attacker.currentAttackHasHit = true;
@@ -65,24 +97,8 @@ function applyHit(attacker, defender, { move, blocked }) {
 
   defender.health = Math.max(0, defender.health - move.damage);
   defender.hitFlashFrames = 6;
-
-  attacker.comboHitCount += 1;
-  attacker.comboDamage += move.damage;
-  attacker.comboDisplayFrames = COMBAT.COMBO_DISPLAY_FRAMES;
-
-  switch (move.onHit) {
-    case 'launch':
-      defender.vy = -move.launchVelocity;
-      defender.fsm.transition('launched');
-      break;
-    case 'knockdown':
-      defender.knockdownFrames = COMBAT.KNOCKDOWN_FRAMES;
-      defender.fsm.transition('knockdown');
-      break;
-    default:
-      defender.stunFrames = move.hitStunFrames;
-      defender.fsm.transition('hitStun');
-  }
+  creditCombo(attacker, move.damage);
+  applyCleanHitEffect(defender, move);
 
   return HIT_STOP_FRAMES;
 }
@@ -96,4 +112,36 @@ export function resolveAttacks(a, b) {
   if (hitOnB) hitStop = Math.max(hitStop, applyHit(a, b, hitOnB));
   if (hitOnA) hitStop = Math.max(hitStop, applyHit(b, a, hitOnA));
   return hitStop;
+}
+
+// Projectiles aren't a Fighter (no fsm/facing/activeMove), so they get their
+// own resolve function rather than shoehorning into computeHit/applyHit.
+export function resolveProjectileHit(projectile, defender) {
+  if (!projectile.alive) return 0;
+  if (!overlaps(projectile.getBox(), getHurtbox(defender))) return 0;
+
+  projectile.alive = false; // consumed on impact whether blocked or not
+  const blocked = projectile.low ? defender.fsm.is('crouchBlock') : defender.fsm.is('standingBlock');
+  defender.vx = (blocked ? projectile.chipKnockback : projectile.knockback) * Math.sign(projectile.vx || 1);
+
+  if (blocked) {
+    defender.health = Math.max(1, defender.health - projectile.chipDamage);
+    defender.hitFlashFrames = 3;
+    defender.stunFrames = projectile.blockStunFrames;
+    defender.fsm.transition('blockStun');
+    return BLOCK_STOP_FRAMES;
+  }
+
+  defender.health = Math.max(0, defender.health - projectile.damage);
+  defender.hitFlashFrames = 6;
+  creditCombo(projectile.owner, projectile.damage);
+
+  if (defender.fsm.is('launched')) {
+    defender.vy = -COMBAT.JUGGLE_POP_VELOCITY;
+  } else {
+    defender.stunFrames = projectile.hitStunFrames;
+    defender.fsm.transition('hitStun');
+  }
+
+  return HIT_STOP_FRAMES;
 }

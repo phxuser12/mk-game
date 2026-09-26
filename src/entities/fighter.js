@@ -1,6 +1,7 @@
 import { StateMachine } from '../engine/stateMachine.js';
 import { STAGE, FIGHTER } from '../engine/constants.js';
 import { clamp } from '../engine/utils.js';
+import { MotionBuffer, computeMotionDir } from '../engine/motionBuffer.js';
 import { fighterStates } from './fighterStates.js';
 
 export class Fighter {
@@ -31,6 +32,10 @@ export class Fighter {
     this.comboDamage = 0;
     this.comboDisplayFrames = 0; // ticks left to show the combo counter UI after the last hit
 
+    this.projectileSpawned = false; // guards a projectile move from spawning more than once per swing
+    this.pendingProjectile = null; // set by fighterStates.js; main.js reads it, spawns a Projectile, and clears it
+    this.motionBuffer = new MotionBuffer(); // recent directional taps, checked against special-move input patterns
+
     this.fsm = new StateMachine(this, fighterStates, 'idle');
   }
 
@@ -55,6 +60,7 @@ export class Fighter {
 
   update(dt, input, opponent) {
     this.updateFacing(opponent);
+    this.motionBuffer.update(computeMotionDir(input, this.facing));
     this.fsm.update(dt, input);
 
     if (this.isCrouching) this.height = FIGHTER.CROUCH_HEIGHT;

@@ -23,7 +23,7 @@ npx serve .
 
 Then open `http://localhost:8000` (or whatever port it prints).
 
-## Controls (Milestone 4)
+## Controls (Milestone 5)
 
 | Action | P1 | P2 |
 | --- | --- | --- |
@@ -55,8 +55,23 @@ into the next one instead of waiting it out. Miss the window or press the
 wrong button and the string drops back to a single hit. A live hit-count/
 damage readout appears once a chain reaches 2+ hits.
 
+**Special (placeholder, shared by both fighters until real characters
+exist)**: tap Back, Back, Forward, then High Punch, within about a
+third-second window, to throw a projectile ("Raging Bolt"). This is a tap/
+charge-style input, not a motion-fighter circle — the game reads the last
+few directional taps and checks them against the required pattern. Like the
+uppercut, it's telegraphed (slow startup) and can be blocked for chip damage.
+
+**Juggling**: a clean uppercut launches the opponent airborne; any further
+clean hit that reaches them before they land extends the juggle (refreshes
+their upward momentum, keeps racking up the combo counter) instead of
+grounding them into ordinary hit-stun. Reach matters — a normal aimed at
+chest height won't connect with someone floating well above it; the
+uppercut's own hitbox spans low-to-high specifically so it can anti-air and
+juggle.
+
 Press `` ` `` (backtick) to toggle the hitbox/hurtbox debug overlay (green =
-hurtbox, red = active hitbox).
+hurtbox, red = active hitbox, orange = projectile).
 
 ## Project structure
 
@@ -66,9 +81,9 @@ src/
   engine/       game loop, input, state machine, collision, combat (hitbox/hurtbox), shared constants
   entities/     Fighter class and its state table
   stage/        arena/background rendering, stage bounds
-  characters/   per-character data: movesets, combo strings, sprite refs (shared placeholder data for now)
+  characters/   per-character data: movesets, combo strings, specials, sprite refs (shared placeholder data for now)
   ui/           HUD: health bars, combo counter (done); round timer lands in Milestone 6
-  debug/        hitbox/hurtbox debug overlay
+  debug/        hitbox/hurtbox/projectile debug overlay
 assets/
   sprites/      placeholder boxes for now; sprite sheets land here later
   audio/        SFX + music, hooked up in Milestone 8
