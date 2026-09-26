@@ -29,7 +29,7 @@ ctx.imageSmoothingEnabled = false; // crisp pixel-art scaling, not blurry
 
 const input = new InputManager();
 
-const p1 = new Fighter({ x: 300, facing: 1, character: ROSTER.emil });
+const p1 = new Fighter({ x: 300, facing: 1, character: ROSTER.burak });
 const p2 = new Fighter({ x: 660, facing: -1, character: ROSTER.aleks });
 
 const match = new Match();

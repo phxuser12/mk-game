@@ -24,7 +24,7 @@ SPRITES_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "as
 
 # Poses that now have real art and must NOT be regenerated procedurally.
 REAL_ART_POSES = {
-    "emil": {"idle", "punch"},
+    "burak": {"idle", "punch"},
     "aleks": set(),
 }
 
@@ -70,7 +70,7 @@ def lerp_parts(base, full, t):
 # the bottom.
 # ---------------------------------------------------------------------------
 
-EMIL_BASE = {
+BURAK_BASE = {
     "head": (28, 4, 62, 34),
     "face": (33, 24, 57, 36),
     "shoulder_l": (10, 38, 30, 58),
@@ -106,10 +106,10 @@ ALEKS_BASE = {
     "stripe_r": (42, 158, 64, 162),
 }
 
-EMIL_BASE = {k: shift(v, dx=OFFSET_X, dy=OFFSET_Y) for k, v in EMIL_BASE.items()}
+BURAK_BASE = {k: shift(v, dx=OFFSET_X, dy=OFFSET_Y) for k, v in BURAK_BASE.items()}
 ALEKS_BASE = {k: shift(v, dx=OFFSET_X, dy=OFFSET_Y) for k, v in ALEKS_BASE.items()}
 
-EMIL_PALETTE = {
+BURAK_PALETTE = {
     "head": (60, 60, 65, 255),
     "face": (196, 154, 108, 255),
     "shoulder_l": (127, 140, 141, 255),
@@ -524,11 +524,11 @@ def generate(base, palette, character):
 
 
 if __name__ == "__main__":
-    emil_sizes = generate(EMIL_BASE, EMIL_PALETTE, "emil")
+    burak_sizes = generate(BURAK_BASE, BURAK_PALETTE, "burak")
     aleks_sizes = generate(ALEKS_BASE, ALEKS_PALETTE, "aleks")
 
-    print("Emil pose canvas sizes:")
-    for k, v in emil_sizes.items():
+    print("Burak pose canvas sizes:")
+    for k, v in burak_sizes.items():
         print(f"  {k}: {v[0]}x{v[1]}")
-    total = 2 * (len(emil_sizes) + len(aleks_sizes))
+    total = 2 * (len(burak_sizes) + len(aleks_sizes))
     print("done:", total, f"procedural sprite files written under {SPRITES_DIR}/<character>/")

@@ -12,7 +12,7 @@ read that first if you're picking this project back up after a break.
 generation in a condemned steel-mill city, run by a shadow syndicate. Win
 the circuit or don't leave it.
 
-**Roster**: **Emil** (P1) — a broad-shouldered foundry brawler in a helmet
+**Roster**: **Burak** (P1) — a broad-shouldered foundry brawler in a helmet
 and rust-red apron. **Aleks** (P2) — a leaner, hooded scrapper in a blue
 wrap. Both currently share the exact same moveset/frame data (see
 `src/characters/genericMoves.js` etc.) — only their sprites and name are
@@ -25,10 +25,10 @@ fighter's current state by `poseKeyFor()` in `src/entities/fighter.js`.
 High/Low Punch share the punch pose and High/Low Kick share the kick pose
 rather than each move getting its own art.
 
-Sprites live one folder per character (`assets/sprites/emil/`,
+Sprites live one folder per character (`assets/sprites/burak/`,
 `assets/sprites/aleks/`), each pose as `<pose>_<frameIndex>.png`. Frame
 count varies by pose and is tracked in `FRAME_COUNTS` in `roster.js` —
-**Emil's `idle` (4 frames) and `punch` (5 frames) are real generated art**;
+**Burak's `idle` (4 frames) and `punch` (5 frames) are real generated art**;
 everything else on both characters is still the original procedural
 placeholder (2 frames), to be replaced pose-by-pose over time. Frames
 always restart at index 0 the instant the pose changes (so an attack's
@@ -182,9 +182,9 @@ src/
   debug/        hitbox/hurtbox/projectile debug overlay
 assets/
   sprites/
-    emil/       one folder per character. <pose>_<frameIndex>.png per file;
+    burak/       one folder per character. <pose>_<frameIndex>.png per file;
     aleks/      frame count varies by pose (see FRAME_COUNTS in roster.js).
-                Emil's idle/punch are real generated art; everything else on
+                Burak's idle/punch are real generated art; everything else on
                 both characters is still the procedural placeholder. A
                 packed sprite sheet + JSON frame data is still future work.
   audio/        reserved for real recorded SFX/music, once they exist

@@ -115,11 +115,15 @@ behind each stage:
   stored HTTPS git credential, only a working SSH key already authorized for
   the `phxuser12` account. Branch renamed `master` → `main`, set as GitHub's
   default branch, old `master` deleted.
-- **Sprites, five iterations** (see §4 below for the current state in
-  detail):
+- **Sprites, five iterations, plus a later name change** (see §4 below for
+  the current state in detail):
   1. One static sprite per character, squash-stretched onto the collision
      box. Characters were briefly named Krug/Vesper, then renamed to
      **Emil** (P1) and **Aleks** (P2) — all files/refs updated together.
+     (P1 was later renamed again, to **Burak** — see below. All file paths,
+     variable names, etc. in this doc use the current name, Burak, even
+     when describing work that happened while the character was still
+     called Emil.)
   2. Expanded to 13 poses per character, one frame each, fixed uniform
      canvas size, fixed-frame feet-anchored drawing (replacing the squash
      hack).
@@ -131,19 +135,33 @@ behind each stage:
      the repo, and the local folder was renamed `mk-fighter` → `mk-game` to
      match the GitHub repo name (see the naming note at the top of this
      doc).
-  5. **Current state**: the first REAL (externally generated, not
-     procedural) art arrived for Emil — `idle` (4 frames) and `punch` (5
-     frames), from an AI image-generation brief (see §4's "generation
-     brief" note). This forced two real changes: sprites moved from flat
+  5. The first REAL (externally generated, not procedural) art arrived —
+     `idle` (4 frames) and `punch` (5 frames), from an AI image-generation
+     brief (see §4's "generation brief" note). This forced two real
+     changes: sprites moved from flat
      `assets/sprites/{character}_{pose}_{frame}.png` into one folder per
-     character (`assets/sprites/emil/`, `assets/sprites/aleks/`), since art
-     will now keep arriving character-by-character and pose-by-pose over
-     time; and a real bug got caught and fixed — animation used a single
-     flat "10 ticks per frame" rate, which made a 5-frame punch's frames
-     2-4 mathematically unreachable within High Punch's 20-tick total
-     duration. Fixed by mapping attack-pose frames onto the move's own
-     startup+active+recovery progress instead of a flat timer. Full detail
-     in §4.
+     character, since art will now keep arriving character-by-character
+     and pose-by-pose over time; and a real bug got caught and fixed —
+     animation used a single flat "10 ticks per frame" rate, which made a
+     5-frame punch's frames 2-4 mathematically unreachable within High
+     Punch's 20-tick total duration. Fixed by mapping attack-pose frames
+     onto the move's own startup+active+recovery progress instead of a
+     flat timer. Full detail in §4.
+  6. **Current state**: a second real-art batch was attempted (all 13
+     poses, sized to an irregular-per-pose brief) but failed QA — roughly
+     half the poses had visible duplicate/ghosted figures and baked-in
+     filename text, apparently from a mis-cropped contact-sheet pipeline.
+     Caught by building a per-pose contact sheet and visually reviewing
+     every frame before integrating anything; nothing from that batch was
+     integrated. The delivery format was changed as a result: future
+     batches come as one sheet image + a JSON coordinate manifest (bounding
+     box per sprite), sliced on this end instead of relying on an external
+     auto-crop step. See §4's "generation brief" note for the current brief
+     text (height capped at 200px, width irregular per pose).
+- **Character rename: Emil → Burak.** Purely cosmetic — name, `ROSTER` key,
+  and the `assets/sprites/` folder name all changed; no behavior, palette,
+  or art changed. If anything in git history, old filenames, or an old copy
+  of the generation brief still says "Emil," that's the same character.
 - **P2 key remap**: attack/block buttons moved from Numpad 4/5/6/2/0 to
   Numpad 7/1/9/3/5 (a deliberate layout: top corners = High Punch/Kick,
   bottom corners = Low Punch/Kick, center = Block). Run stayed Numpad Enter.
@@ -190,7 +208,7 @@ src/
   stage/stage.js                 arena background (flat fill + lines, no image yet)
 assets/
   sprites/
-    emil/, aleks/                 one folder per character, <pose>_<frameIndex>.png;
+    burak/, aleks/                 one folder per character, <pose>_<frameIndex>.png;
                                    frame count varies per pose (see §4, FRAME_COUNTS)
   audio/                          empty, reserved for real recorded SFX/music later
 tools/
@@ -222,7 +240,7 @@ This has been the most iterated-on system in the project — worth getting
 right in anyone's mental model, and it's actively evolving (real art is
 being generated pose-by-pose, character-by-character, ongoing).
 
-**Both characters share 100% of their move data.** Emil and Aleks are
+**Both characters share 100% of their move data.** Burak and Aleks are
 mechanically identical; only their name, fallback color, and sprite art
 differ (`src/characters/roster.js`). Per-character distinct movesets are
 explicitly future work (see §5).
@@ -248,7 +266,7 @@ The state → pose mapping lives in `poseKeyFor()` in `src/entities/fighter.js`.
 
 ### File layout: one folder per character
 
-`assets/sprites/emil/` and `assets/sprites/aleks/`, each containing
+`assets/sprites/burak/` and `assets/sprites/aleks/`, each containing
 `<pose>_<frameIndex>.png` (zero-indexed, no character prefix — the folder
 *is* the namespace). This replaced an earlier flat
 `assets/sprites/{character}_{pose}_{frame}.png` layout once real art started
@@ -258,7 +276,7 @@ arriving character-by-character and pose-by-pose rather than all at once.
 `FRAME_COUNTS` map tracks how many frames actually exist for each
 pose/character pair; anything not listed defaults to 2 (the original
 procedural placeholder count). `buildSprites()` generates the actual path
-arrays from that count. **As of now**: Emil's `idle` has 4 frames and
+arrays from that count. **As of now**: Burak's `idle` has 4 frames and
 `punch` has 5 — both **real generated art** (see the generation brief
 described below), replacing what used to be 2-frame procedural placeholders
 for those two poses specifically. Every other pose on both characters is
@@ -274,7 +292,7 @@ true for whatever it still generates:
 - **Each pose's canvas is auto-cropped to its own content**, not a shared
   fixed size — the bounding box of the pose's drawn parts (both frames)
   plus an 8px margin. This is why proportions vary meaningfully: idle/walk
-  stay portrait (walk is 93×192 for Emil), while the kick is genuinely
+  stay portrait (walk is 93×192 for Burak), while the kick is genuinely
   landscape (~221×86).
 - **The kick's shape was a deliberate mid-course correction worth
   remembering** (and worth telling any future artist/AI generating real
@@ -293,7 +311,7 @@ true for whatever it still generates:
   "settle/twitch" second frame).
 - `REAL_ART_POSES` at the top of the script lists which poses to SKIP
   generating, per character, because real art now exists there — currently
-  `{"emil": {"idle", "punch"}, "aleks": set()}`. **Update this set whenever
+  `{"burak": {"idle", "punch"}, "aleks": set()}`. **Update this set whenever
   more real art lands**, so re-running the script never overwrites it.
 
 ### Real art: the generation brief
@@ -302,7 +320,7 @@ Real frames are being sourced from external AI image generators/agents,
 fed a detailed written brief (character identity + exact hex palette + art
 direction + technical spec + a per-pose frame-count/motion-progression
 table + delivery/naming format). That brief was written once, in
-conversation, for Emil, and is trivially adaptable to Aleks (only the
+conversation, for Burak, and is trivially adaptable to Aleks (only the
 identity/palette paragraph changes). It's not currently saved as a file in
 this repo — **if it's needed again, ask for it to be regenerated, or better,
 save it into the repo (e.g. `tools/sprite_generation_brief.md`) next time
@@ -339,7 +357,7 @@ the swing).
 **This distinction exists because of a real bug, caught by testing, worth
 remembering as a pattern:** the flat-timer approach was originally used for
 *every* pose, including attacks. That's fine as long as frame count stays
-low, but the instant Emil's punch went from 2 procedural frames to 5 real
+low, but the instant Burak's punch went from 2 procedural frames to 5 real
 frames, it broke completely — 5 frames at 10 ticks/frame need 50 ticks to
 cycle through once, but High Punch's entire startup+active+recovery is only
 20 ticks long. Frames 2, 3, and 4 were mathematically unreachable; the move
@@ -357,7 +375,7 @@ actual `(x, y)`. This is independent of the collision hurtbox (`this.height`,
 still a fixed value per state for gameplay purposes) — the two systems don't
 need to agree, and don't currently. This also means procedural placeholder
 art and real art can have wildly different native pixel dimensions (the real
-Emil frames are a uniform 150×200; procedural poses vary per pose) and still
+Burak frames are a uniform 150×200; procedural poses vary per pose) and still
 render at consistent relative on-screen size, with zero per-pose code.
 
 **To integrate a new batch of real art** (the expected workflow going
@@ -374,7 +392,7 @@ changed meaningfully, sanity-check that `updateAnimation()`'s two rules
 (requires `pip install pillow` — a one-off authoring dependency, not a game
 runtime dependency). The script is parametric: body parts are named
 rectangles (`head`, `torso`, `sleeve_l`, `hand_r`, etc.) shifted/stretched
-from a base skeleton per character (`EMIL_BASE`/`ALEKS_BASE`). Adding a
+from a base skeleton per character (`BURAK_BASE`/`ALEKS_BASE`). Adding a
 character means adding a `*_BASE` + `*_PALETTE` dict with the same keys and
 a `generate(...)` call. Adding a pose means a new entry in `POSE_NAMES` + a
 case in `build_frames()` (or a simple entry in `DELTA_POSES` if it's a
@@ -397,7 +415,7 @@ they aren't "discovered" as bugs later:
   per-character movesets are a distinct future project, not a small tweak.
 - **No packed sprite sheet / JSON frame data yet** — one separate PNG file
   per pose+frame, growing over time as real art replaces placeholders
-  (Emil alone is already at 31 files across 13 poses with mixed frame
+  (Burak alone is already at 31 files across 13 poses with mixed frame
   counts). Fine at this scale; would want packing if the roster or pose/
   frame counts grow much further.
 - **Non-attack poses share one animation frame rate** (`ANIM_FRAME_TICKS`)
@@ -410,10 +428,10 @@ they aren't "discovered" as bugs later:
   cases the `launched` state.
 - **No character-select or versus screen** — the brief's Milestone 8/UI
   checklist item for those was never reached; the game starts directly into
-  Emil vs. Aleks.
+  Burak vs. Aleks.
 - **No real recorded audio yet** — all sound is synthesized (Web Audio).
   This was explicitly permitted/expected by the original brief, not a
-  shortfall. **Art is a partial exception**: Emil's `idle`/`punch` are real
+  shortfall. **Art is a partial exception**: Burak's `idle`/`punch` are real
   generated art now; everything else on both characters is still
   procedurally generated (Pillow rectangles), being replaced incrementally
   (§4).
@@ -479,7 +497,7 @@ than once:
 Nothing here is committed to — this is a menu, not a roadmap promise.
 
 1. **Keep replacing procedural placeholder art with real art**, in
-   progress: Emil has real `idle`/`punch`; 11 more Emil poses and all 13
+   progress: Burak has real `idle`/`punch`; 11 more Burak poses and all 13
    Aleks poses are still procedural. Each new batch needs: files dropped
    into `assets/sprites/<character>/`, `FRAME_COUNTS` updated in
    `roster.js`, the pose added to `REAL_ART_POSES` in
@@ -488,7 +506,7 @@ Nothing here is committed to — this is a menu, not a roadmap promise.
    Also worth doing soon: save the sprite-generation brief itself into the
    repo (e.g. `tools/sprite_generation_brief.md`) rather than re-deriving it
    from chat each time — see §4's note.
-2. **Per-character distinct movesets** — give Emil and Aleks their own
+2. **Per-character distinct movesets** — give Burak and Aleks their own
    normals/specials/finishers instead of sharing everything. The data
    structures already support this (`ROSTER` entries could point at
    character-specific move tables instead of the generic ones); it's

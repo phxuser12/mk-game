@@ -11,9 +11,9 @@
 // count). Frame sizes don't need to match across poses or characters —
 // Fighter reads each sprite's own natural dimensions at draw time.
 const FRAME_COUNTS = {
-  emil: {
-    idle: 4, // real art (see /home/michal/Downloads/emil_sprites_200)
-    punch: 5, // real art
+  burak: {
+    idle: 4, // real generated art
+    punch: 5, // real generated art
   },
   aleks: {},
 };
@@ -40,10 +40,10 @@ function buildSprites(character) {
 }
 
 export const ROSTER = {
-  emil: {
-    name: 'EMIL',
+  burak: {
+    name: 'BURAK',
     color: '#c0392b',
-    sprites: buildSprites('emil'),
+    sprites: buildSprites('burak'),
   },
   aleks: {
     name: 'ALEKS',
