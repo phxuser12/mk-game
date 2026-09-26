@@ -4,14 +4,17 @@ import { clamp } from '../engine/utils.js';
 import { MotionBuffer, computeMotionDir } from '../engine/motionBuffer.js';
 import { fighterStates } from './fighterStates.js';
 
-// Sprites are authored on a wider/taller canvas (150x195) than the original
-// 90x180 so swung limbs and raised heads (punch/kick/sweep/jump/etc.) have
-// room without clipping. These are that canvas's dimensions scaled down by
-// the same ratio the original 90x180 art used to map onto the fighter's
-// collision box (60x140), so the character's actual body renders at the
-// same apparent size — the extra canvas space is just margin, not zoom.
-const SPRITE_FRAME_WIDTH = 100;
-const SPRITE_FRAME_HEIGHT = 152;
+// Each pose's PNGs are auto-cropped to that pose's own content at generation
+// time (see the sprite generator script), so poses have genuinely different
+// native sizes — a kick comes out wider than tall, a walk stays portrait.
+// One shared scale converts "source pixels" to on-screen pixels for all of
+// them, so relative body size stays consistent across poses.
+const SPRITE_SCALE = 0.74;
+
+// Ticks held per animation frame before advancing to the pose's next frame
+// (looping). One rate for every pose for now — a future tuning knob if some
+// poses want to animate faster/slower than others.
+const ANIM_FRAME_TICKS = 10;
 
 // Maps fsm state (+ active move, while attacking) to a sprite pose key.
 // Falls back to 'idle' for states with no dedicated pose yet (block stances,
@@ -47,11 +50,13 @@ export class Fighter {
   constructor({ x, facing, character }) {
     this.color = character.color; // fallback fill until a sprite finishes loading
     this.label = character.name;
-    this.sprites = {};
-    for (const [pose, path] of Object.entries(character.sprites)) {
-      const image = new Image();
-      image.src = path;
-      this.sprites[pose] = image;
+    this.sprites = {}; // pose -> array of Image frames
+    for (const [pose, paths] of Object.entries(character.sprites)) {
+      this.sprites[pose] = paths.map((path) => {
+        const image = new Image();
+        image.src = path;
+        return image;
+      });
     }
     this.fsm = new StateMachine(this, fighterStates, 'idle'); // must exist before reset() calls fsm.transition
     this.reset(x, facing);
@@ -91,6 +96,10 @@ export class Fighter {
     this.justBecameActive = false; // set by fighterStates.js; main.js reads it to play the whiff/special sound, and clears it
     this.motionBuffer = new MotionBuffer(); // recent directional taps, checked against special-move input patterns
 
+    this.pose = 'idle'; // current sprite pose key, tracked in update() so drawBody() doesn't recompute it
+    this.animFrame = 0;
+    this.animTimer = 0;
+
     this.fsm.transition('idle');
   }
 
@@ -127,6 +136,29 @@ export class Fighter {
 
     if (this.hitFlashFrames > 0) this.hitFlashFrames -= 1;
     if (this.comboDisplayFrames > 0) this.comboDisplayFrames -= 1;
+
+    this.updateAnimation();
+  }
+
+  // Advances the sprite animation: a pose change always restarts at frame 0
+  // (so e.g. a punch's wind-up frame always plays from the start of the
+  // swing, never mid-cycle), otherwise the current pose's frames loop on a
+  // fixed timer.
+  updateAnimation() {
+    const poseKey = poseKeyFor(this);
+    if (poseKey !== this.pose) {
+      this.pose = poseKey;
+      this.animFrame = 0;
+      this.animTimer = 0;
+      return;
+    }
+
+    this.animTimer += 1;
+    if (this.animTimer >= ANIM_FRAME_TICKS) {
+      this.animTimer = 0;
+      const frames = this.sprites[poseKey] || this.sprites.idle;
+      this.animFrame = (this.animFrame + 1) % frames.length;
+    }
   }
 
   draw(ctx) {
@@ -152,15 +184,16 @@ export class Fighter {
     ctx.fillText(`${this.label} [${this.fsm.current}]`, this.x, top - 8);
   }
 
-  // Picks the sprite for the current state/move and draws it at a FIXED
-  // frame size, feet-anchored at this.y — unlike the collision hurtbox
-  // (this.height), which still shrinks for crouch/knockdown for gameplay
-  // purposes. The pose art itself shows the crouched/lying/etc. shape within
-  // that fixed frame, rather than squashing a standing image to fit.
-  // Falls back to a flat-color rect at the actual collision box if the
-  // relevant sprite hasn't finished loading.
+  // Draws the current pose's current animation frame, sized from that
+  // frame's OWN native dimensions (times the shared SPRITE_SCALE) rather
+  // than a fixed box — this is what lets a kick render wider-than-tall and
+  // a walk stay portrait. Always feet-anchored at this.y, independent of
+  // the collision hurtbox (this.height), which still shrinks for crouch/
+  // knockdown for gameplay purposes only. Falls back to a flat-color rect
+  // at the actual collision box if the relevant sprite hasn't loaded yet.
   drawBody(ctx, left, top) {
-    const sprite = this.sprites[poseKeyFor(this)] || this.sprites.idle;
+    const frames = this.sprites[this.pose] || this.sprites.idle;
+    const sprite = frames[this.animFrame] || frames[0];
     const spriteReady = sprite && sprite.complete && sprite.naturalWidth > 0;
 
     if (!spriteReady) {
@@ -169,8 +202,10 @@ export class Fighter {
       return;
     }
 
-    const frameLeft = this.x - SPRITE_FRAME_WIDTH / 2;
-    const frameTop = this.y - SPRITE_FRAME_HEIGHT;
+    const displayWidth = sprite.naturalWidth * SPRITE_SCALE;
+    const displayHeight = sprite.naturalHeight * SPRITE_SCALE;
+    const frameLeft = this.x - displayWidth / 2;
+    const frameTop = this.y - displayHeight;
 
     ctx.save();
     if (this.facing === -1) {
@@ -178,13 +213,13 @@ export class Fighter {
       ctx.scale(-1, 1);
       ctx.translate(-this.x, 0);
     }
-    ctx.drawImage(sprite, frameLeft, frameTop, SPRITE_FRAME_WIDTH, SPRITE_FRAME_HEIGHT);
+    ctx.drawImage(sprite, frameLeft, frameTop, displayWidth, displayHeight);
     if (this.hitFlashFrames > 0) {
       // Paints solid white only where the sprite already drew opaque
       // pixels — a cheap "flash white" silhouette without a shader.
       ctx.globalCompositeOperation = 'source-atop';
       ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
-      ctx.fillRect(frameLeft, frameTop, SPRITE_FRAME_WIDTH, SPRITE_FRAME_HEIGHT);
+      ctx.fillRect(frameLeft, frameTop, displayWidth, displayHeight);
     }
     ctx.restore();
   }

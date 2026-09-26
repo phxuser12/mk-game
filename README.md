@@ -14,15 +14,26 @@ wrap. Both currently share the exact same moveset/frame data (see
 `src/characters/genericMoves.js` etc.) — only their sprites and name are
 distinct so far; per-character movesets are future work.
 
-Each has 13 placeholder pose sprites — idle, walk forward/back, jump, crouch,
-punch, kick, uppercut, sweep, special, standing hit-reaction, airborne/
-launched, and knockdown (see `src/characters/roster.js`) — selected per tick
-from the fighter's current state by `poseKeyFor()` in `src/entities/fighter.js`.
+Each has 13 poses — idle, walk forward/back, jump, crouch, punch, kick,
+uppercut, sweep, special, standing hit-reaction, airborne/launched, and
+knockdown (see `src/characters/roster.js`) — selected per tick from the
+fighter's current state by `poseKeyFor()` in `src/entities/fighter.js`.
 High/Low Punch share the punch pose and High/Low Kick share the kick pose
-rather than each move getting its own art. Sprites draw at a fixed frame
-size anchored to the fighter's feet, not squashed to the collision box, so
-crouch/knockdown/launched read as actual poses instead of a stretched idle
-image.
+rather than each move getting its own art.
+
+Every pose has **2 animation frames** that loop while that pose is active,
+and always restart at frame 0 the instant the pose changes (so an attack's
+wind-up frame never starts mid-cycle). Each pose's canvas is auto-cropped to
+its own content at generation time rather than sharing one fixed frame size,
+so proportions follow the actual pose — a walk stays portrait (taller than
+wide), while the kick is a genuine flying side-kick laid out landscape
+(≈2.5x wider than tall) since a grounded standing kick doesn't read as
+"wider than tall" the way an airborne one does. One shared scale constant
+(`SPRITE_SCALE` in `fighter.js`) converts every pose's native size to
+on-screen size, so relative body proportions stay consistent across poses
+despite the different canvases. Sprites are always feet-anchored at the
+fighter's actual position, independent of the (still fixed-size) collision
+hurtbox.
 
 No build step: plain HTML5 Canvas + vanilla JS ES modules.
 
@@ -157,9 +168,11 @@ src/
   ui/           HUD: health bars, combo counter, round timer/pips, match banners
   debug/        hitbox/hurtbox/projectile debug overlay
 assets/
-  sprites/      13 poses x 2 characters (emil_*.png, aleks_*.png) — one static
-                image per pose, no animation frames within a pose yet; real
-                sprite sheets + frame-by-frame animation are future work
+  sprites/      13 poses x 2 frames x 2 characters (emil_<pose>_<0|1>.png,
+                aleks_<pose>_<0|1>.png) — variable canvas size per pose,
+                auto-cropped to content at generation time. A packed sprite
+                sheet + JSON frame data is still future work; these are
+                still one file per frame.
   audio/        reserved for real recorded SFX/music, once they exist
 ```
 
