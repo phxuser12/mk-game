@@ -61,14 +61,14 @@ Then open `http://localhost:8000` (or whatever port it prints).
 | Move | A / D | Left / Right |
 | Crouch | S | Down |
 | Jump | W | Up |
-| High Punch | F | Numpad 4 |
-| Low Punch | G | Numpad 5 |
-| High Kick | H | Numpad 6 |
-| Low Kick | J | Numpad 2 |
-| Block (hold) | Space | Numpad 0 |
+| High Punch | F | Numpad 7 |
+| Low Punch | G | Numpad 1 |
+| High Kick | H | Numpad 9 |
+| Low Kick | J | Numpad 3 |
+| Block (hold) | Space | Numpad 5 |
 | Run (dash) | Left Shift | Numpad Enter |
-| Uppercut | Down + High Punch | Down + Numpad 4 |
-| Sweep | Down + High Kick | Down + Numpad 6 |
+| Uppercut | Down + High Punch | Down + Numpad 7 |
+| Sweep | Down + High Kick | Down + Numpad 9 |
 
 Hold Block standing to guard high attacks, or Block+Down to crouch-guard low
 attacks. High Punch, Low Punch, and High Kick all hit high; Low Kick is the
