@@ -25,19 +25,28 @@ fighter's current state by `poseKeyFor()` in `src/entities/fighter.js`.
 High/Low Punch share the punch pose and High/Low Kick share the kick pose
 rather than each move getting its own art.
 
-Every pose has **2 animation frames** that loop while that pose is active,
-and always restart at frame 0 the instant the pose changes (so an attack's
-wind-up frame never starts mid-cycle). Each pose's canvas is auto-cropped to
-its own content at generation time rather than sharing one fixed frame size,
-so proportions follow the actual pose — a walk stays portrait (taller than
-wide), while the kick is a genuine flying side-kick laid out landscape
-(≈2.5x wider than tall) since a grounded standing kick doesn't read as
-"wider than tall" the way an airborne one does. One shared scale constant
-(`SPRITE_SCALE` in `fighter.js`) converts every pose's native size to
-on-screen size, so relative body proportions stay consistent across poses
-despite the different canvases. Sprites are always feet-anchored at the
-fighter's actual position, independent of the (still fixed-size) collision
-hurtbox.
+Sprites live one folder per character (`assets/sprites/emil/`,
+`assets/sprites/aleks/`), each pose as `<pose>_<frameIndex>.png`. Frame
+count varies by pose and is tracked in `FRAME_COUNTS` in `roster.js` —
+**Emil's `idle` (4 frames) and `punch` (5 frames) are real generated art**;
+everything else on both characters is still the original procedural
+placeholder (2 frames), to be replaced pose-by-pose over time. Frames
+always restart at index 0 the instant the pose changes (so an attack's
+wind-up frame never starts mid-cycle). While attacking, the frame shown is
+mapped onto the move's own startup/active/recovery progress rather than a
+flat timer, so a move's frames are guaranteed to all be seen exactly once
+across its actual on-screen duration regardless of how many frames it has
+or how long the move lasts; every other pose loops on a flat timer.
+
+Each pose's canvas is its own native size (not a shared fixed frame) — a
+walk stays portrait (taller than wide), while the kick is a genuine flying
+side-kick laid out landscape (≈2.5x wider than tall) since a grounded
+standing kick doesn't read as "wider than tall" the way an airborne one
+does. One shared scale constant (`SPRITE_SCALE` in `fighter.js`) converts
+every sprite's native size to on-screen size, so relative body proportions
+stay consistent across poses and across procedural-vs-real art. Sprites are
+always feet-anchored at the fighter's actual position, independent of the
+(still fixed-size) collision hurtbox.
 
 No build step: plain HTML5 Canvas + vanilla JS ES modules.
 
@@ -172,15 +181,19 @@ src/
   ui/           HUD: health bars, combo counter, round timer/pips, match banners
   debug/        hitbox/hurtbox/projectile debug overlay
 assets/
-  sprites/      13 poses x 2 frames x 2 characters (emil_<pose>_<0|1>.png,
-                aleks_<pose>_<0|1>.png) — variable canvas size per pose,
-                auto-cropped to content at generation time. A packed sprite
-                sheet + JSON frame data is still future work; these are
-                still one file per frame.
+  sprites/
+    emil/       one folder per character. <pose>_<frameIndex>.png per file;
+    aleks/      frame count varies by pose (see FRAME_COUNTS in roster.js).
+                Emil's idle/punch are real generated art; everything else on
+                both characters is still the procedural placeholder. A
+                packed sprite sheet + JSON frame data is still future work.
   audio/        reserved for real recorded SFX/music, once they exist
 tools/
-  generate_sprites.py   regenerates every file in assets/sprites/ (Pillow;
-                        a one-off authoring dependency, not a runtime one)
+  generate_sprites.py   regenerates PROCEDURAL PLACEHOLDER sprites into
+                        assets/sprites/<character>/ (Pillow; a one-off
+                        authoring dependency, not a runtime one). Skips any
+                        pose listed in REAL_ART_POSES so it never overwrites
+                        real art.
 ```
 
 Character visuals/movesets are meant to be data-driven (sprite sheet + frame

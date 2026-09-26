@@ -1,9 +1,22 @@
-// Two original playable characters. Each pose now has 2 animation frames
-// (see Fighter's animation state in src/entities/fighter.js) and its own
-// native image size — poses are auto-cropped to their own content at
-// generation time, so e.g. a kick comes out wider than tall while a walk
-// stays portrait, without any per-pose sizing logic here. `color` is only
-// used as a fallback fill if a sprite hasn't finished loading.
+// Two original playable characters. Each character's sprites live in their
+// own folder (assets/sprites/<character>/<pose>_<frameIndex>.png) so art
+// can be swapped in per-character/per-pose independently as real frames
+// replace the procedural placeholders. `color` is only used as a fallback
+// fill if a sprite hasn't finished loading.
+//
+// FRAME_COUNTS tracks how many frames actually exist per pose, per
+// character — update this as new frames are dropped in (e.g. from
+// tools/generate_sprites.py, or real generated/hand-drawn art). Any pose
+// not listed here defaults to 2 (the original procedural placeholder
+// count). Frame sizes don't need to match across poses or characters —
+// Fighter reads each sprite's own natural dimensions at draw time.
+const FRAME_COUNTS = {
+  emil: {
+    idle: 4, // real art (see /home/michal/Downloads/emil_sprites_200)
+    punch: 5, // real art
+  },
+  aleks: {},
+};
 
 const POSE_NAMES = [
   'idle', 'walkForward', 'walkBack', 'jump', 'crouch',
@@ -11,13 +24,17 @@ const POSE_NAMES = [
   'hitStun', 'launched', 'knockdown',
 ];
 
-function buildSprites(prefix) {
+const DEFAULT_FRAME_COUNT = 2;
+
+function buildSprites(character) {
+  const counts = FRAME_COUNTS[character] || {};
   const sprites = {};
   for (const pose of POSE_NAMES) {
-    sprites[pose] = [
-      `assets/sprites/${prefix}_${pose}_0.png`,
-      `assets/sprites/${prefix}_${pose}_1.png`,
-    ];
+    const frameCount = counts[pose] || DEFAULT_FRAME_COUNT;
+    sprites[pose] = Array.from(
+      { length: frameCount },
+      (_, i) => `assets/sprites/${character}/${pose}_${i}.png`
+    );
   }
   return sprites;
 }

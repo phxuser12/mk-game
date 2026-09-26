@@ -142,8 +142,14 @@ export class Fighter {
 
   // Advances the sprite animation: a pose change always restarts at frame 0
   // (so e.g. a punch's wind-up frame always plays from the start of the
-  // swing, never mid-cycle), otherwise the current pose's frames loop on a
-  // fixed timer.
+  // swing, never mid-cycle). While attacking, frames are mapped onto the
+  // move's own startup+active+recovery progress (via attackFrame) rather
+  // than a flat timer — a fixed ticks-per-frame rate would make longer
+  // frame sequences mathematically unreachable on short moves (a 5-frame
+  // punch needs 50 ticks at 10 ticks/frame to cycle through, but High Punch
+  // only lasts 20 ticks total, so frames 2-4 would never show). Every other
+  // pose (idle, walk, etc., with no fixed "total duration" to map onto)
+  // still loops on the flat timer.
   updateAnimation() {
     const poseKey = poseKeyFor(this);
     if (poseKey !== this.pose) {
@@ -153,10 +159,19 @@ export class Fighter {
       return;
     }
 
+    const frames = this.sprites[poseKey] || this.sprites.idle;
+
+    if (this.fsm.is('attacking') && this.activeMove) {
+      const move = this.activeMove;
+      const totalMoveFrames = move.startup + move.active + move.recovery;
+      const progress = Math.min(this.attackFrame / totalMoveFrames, 1);
+      this.animFrame = Math.min(frames.length - 1, Math.floor(progress * frames.length));
+      return;
+    }
+
     this.animTimer += 1;
     if (this.animTimer >= ANIM_FRAME_TICKS) {
       this.animTimer = 0;
-      const frames = this.sprites[poseKey] || this.sprites.idle;
       this.animFrame = (this.animFrame + 1) % frames.length;
     }
   }

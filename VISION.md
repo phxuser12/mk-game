@@ -115,7 +115,7 @@ behind each stage:
   stored HTTPS git credential, only a working SSH key already authorized for
   the `phxuser12` account. Branch renamed `master` → `main`, set as GitHub's
   default branch, old `master` deleted.
-- **Sprites, three iterations** (see §4 below for the current state in
+- **Sprites, five iterations** (see §4 below for the current state in
   detail):
   1. One static sprite per character, squash-stretched onto the collision
      box. Characters were briefly named Krug/Vesper, then renamed to
@@ -123,10 +123,27 @@ behind each stage:
   2. Expanded to 13 poses per character, one frame each, fixed uniform
      canvas size, fixed-frame feet-anchored drawing (replacing the squash
      hack).
-  3. **Current state**: every pose got a second animation frame, and canvas
-     sizes became per-pose auto-cropped-to-content instead of uniform —
-     this is what makes a kick genuinely render wider-than-tall while a walk
-     stays portrait. Full detail in §4.
+  3. Every pose got a second animation frame, and canvas sizes became
+     per-pose auto-cropped-to-content instead of uniform — this is what
+     makes a kick genuinely render wider-than-tall while a walk stays
+     portrait.
+  4. `VISION.md` (this doc) and `tools/generate_sprites.py` were added to
+     the repo, and the local folder was renamed `mk-fighter` → `mk-game` to
+     match the GitHub repo name (see the naming note at the top of this
+     doc).
+  5. **Current state**: the first REAL (externally generated, not
+     procedural) art arrived for Emil — `idle` (4 frames) and `punch` (5
+     frames), from an AI image-generation brief (see §4's "generation
+     brief" note). This forced two real changes: sprites moved from flat
+     `assets/sprites/{character}_{pose}_{frame}.png` into one folder per
+     character (`assets/sprites/emil/`, `assets/sprites/aleks/`), since art
+     will now keep arriving character-by-character and pose-by-pose over
+     time; and a real bug got caught and fixed — animation used a single
+     flat "10 ticks per frame" rate, which made a 5-frame punch's frames
+     2-4 mathematically unreachable within High Punch's 20-tick total
+     duration. Fixed by mapping attack-pose frames onto the move's own
+     startup+active+recovery progress instead of a flat timer. Full detail
+     in §4.
 - **P2 key remap**: attack/block buttons moved from Numpad 4/5/6/2/0 to
   Numpad 7/1/9/3/5 (a deliberate layout: top corners = High Punch/Kick,
   bottom corners = Low Punch/Kick, center = Block). Run stayed Numpad Enter.
@@ -156,7 +173,7 @@ src/
     fighterStates.js          the actual state table (idle/walk/attack/block/stun/etc.)
     projectile.js             traveling hitbox entity (independent of its owner's body)
   characters/
-    roster.js                 per-character name/color/sprite-pose-paths
+    roster.js                 per-character name/color/sprite-pose-paths, FRAME_COUNTS (§4)
     genericMoves.js           High/Low Punch/Kick frame data (shared placeholder — see §5)
     genericCombo.js            the one dial-a-combo string
     genericSpecials.js         the one special move (ragingBolt)
@@ -172,10 +189,13 @@ src/
   debug/debugDraw.js            hitbox/hurtbox/projectile debug overlay (backtick key)
   stage/stage.js                 arena background (flat fill + lines, no image yet)
 assets/
-  sprites/                       52 PNG files: 13 poses x 2 frames x 2 characters
+  sprites/
+    emil/, aleks/                 one folder per character, <pose>_<frameIndex>.png;
+                                   frame count varies per pose (see §4, FRAME_COUNTS)
   audio/                          empty, reserved for real recorded SFX/music later
 tools/
-  generate_sprites.py             regenerates every file in assets/sprites/ (see §4)
+  generate_sprites.py             regenerates PROCEDURAL PLACEHOLDER sprites only —
+                                   skips any pose in REAL_ART_POSES (see §4)
 ```
 
 **Fighter states** (the actual FSM in `fighterStates.js`): `idle`,
@@ -198,16 +218,16 @@ shapes** (a genuinely novel mechanic still needs engine work).
 
 ## 4. Sprites & animation (current state, in detail)
 
-This was the most recently built and most iterated-on system — worth
-getting right in anyone's mental model.
+This has been the most iterated-on system in the project — worth getting
+right in anyone's mental model, and it's actively evolving (real art is
+being generated pose-by-pose, character-by-character, ongoing).
 
 **Both characters share 100% of their move data.** Emil and Aleks are
 mechanically identical; only their name, fallback color, and sprite art
 differ (`src/characters/roster.js`). Per-character distinct movesets are
 explicitly future work (see §5).
 
-**13 poses, 2 animation frames each, 2 characters = 52 PNG files** in
-`assets/sprites/`, named `{character}_{pose}_{0|1}.png`. The poses:
+**13 poses** (unchanged since the last redesign):
 
 | Pose | Fighter states/moves it covers |
 |---|---|
@@ -226,61 +246,143 @@ explicitly future work (see §5).
 
 The state → pose mapping lives in `poseKeyFor()` in `src/entities/fighter.js`.
 
-**Each pose's canvas is auto-cropped to its own content**, not a shared
-fixed size — computed by `tools/generate_sprites.py` at generation time by
-taking the bounding box of the pose's drawn parts (both frames) plus an 8px
-margin. This is why proportions vary meaningfully: idle/walk stay portrait
-(walk is 93×192 for Emil), while the kick is genuinely landscape (~221×86).
+### File layout: one folder per character
 
-**The kick's shape was a deliberate mid-course correction worth
-remembering.** A *grounded* standing side-kick keeps the torso upright and
-stays portrait even with a leg extended — it does NOT naturally read as
-"wider than tall." To get a real landscape aspect, the kick was rebuilt as a
-hand-authored **airborne flying kick** with the whole body laid out
-horizontally (all limbs sharing a similar height band, spread wide in x) —
-see `pose_kick_air()` in the generator script. If more "wide" poses are
-wanted later, this is the technique: don't try to force a standing pose
-wide, redesign it as airborne/horizontal.
+`assets/sprites/emil/` and `assets/sprites/aleks/`, each containing
+`<pose>_<frameIndex>.png` (zero-indexed, no character prefix — the folder
+*is* the namespace). This replaced an earlier flat
+`assets/sprites/{character}_{pose}_{frame}.png` layout once real art started
+arriving character-by-character and pose-by-pose rather than all at once.
 
-**Frame 0 of most poses is generated, not hand-drawn**, by linearly
-interpolating each body part's rectangle between its idle position and its
-full-pose (frame 1) position at t=0.5 — see `lerp_parts()`. This gives every
-delta-based pose (walk, jump, crouch, punch, uppercut, sweep, special,
-hitStun, launched) a "wind-up" first frame for free. Three poses are
-hand-authored instead because they're structurally unlike a lerp from
-standing: **idle** (can't interpolate toward itself — gets a dedicated
-subtle "boxer bob," a small torso/arm dip), **kick** (see above), and
-**knockdown** (a lying-down layout with its own small "settle/twitch" second
-frame).
+**Frame count is per-pose, per-character, and varies.** `roster.js`'s
+`FRAME_COUNTS` map tracks how many frames actually exist for each
+pose/character pair; anything not listed defaults to 2 (the original
+procedural placeholder count). `buildSprites()` generates the actual path
+arrays from that count. **As of now**: Emil's `idle` has 4 frames and
+`punch` has 5 — both **real generated art** (see the generation brief
+described below), replacing what used to be 2-frame procedural placeholders
+for those two poses specifically. Every other pose on both characters is
+still the original procedural placeholder, at 2 frames.
 
-**Fighter animation state** (`src/entities/fighter.js`): tracks `this.pose`,
-`this.animFrame`, `this.animTimer`. `updateAnimation()` runs every tick from
-`update()` (not from `render()` — this matters for testing, see §6): if the
-pose changed since last tick, resets to frame 0 immediately (so an attack's
-wind-up frame always plays from the start of the swing); otherwise advances
-the frame on a fixed timer (`ANIM_FRAME_TICKS = 10`, one rate for every pose
-— a real simplification, noted as a future tuning knob if some poses should
-animate faster/slower than others).
+### Procedural placeholder art (everything not yet replaced)
 
-**Display sizing**: `drawBody()` computes on-screen size as
-`sprite.naturalWidth/Height * SPRITE_SCALE` (currently `0.74`), anchored
-bottom-center at the fighter's actual `(x, y)`. This is independent of the
-collision hurtbox (`this.height`, still a fixed value per state for gameplay
-purposes) — the two systems don't need to agree, and don't currently.
+`tools/generate_sprites.py` (Pillow) draws simple rectangle body parts
+(head/torso/limbs as named, colored rects) and is what produced every
+sprite that hasn't been replaced by real art yet. Key techniques, still
+true for whatever it still generates:
 
-**To add or change sprites**: edit `tools/generate_sprites.py` and re-run
-`python3 tools/generate_sprites.py` (requires `pip install pillow` — a
-one-off authoring dependency, not a game runtime dependency). The script is
-parametric: body parts are named rectangles (`head`, `torso`, `sleeve_l`,
-`hand_r`, etc.) shifted/stretched from a base skeleton per character
-(`EMIL_BASE`/`ALEKS_BASE`). Adding a character means adding a `*_BASE` +
-`*_PALETTE` dict with the same keys and a `generate(...)` call. Adding a
-pose means a new entry in `POSE_NAMES` + a case in `build_frames()` (or a
-simple entry in `DELTA_POSES` if it's a lerp-from-idle transform) — then
-wire the new pose key into `roster.js`'s pose list and reference it from a
-move's `pose` field. **This script was reconstructed into the repo
-specifically so it wouldn't be lost** — it originally only existed in an
-ephemeral agent scratchpad; verified byte-identical to the shipped sprites
+- **Each pose's canvas is auto-cropped to its own content**, not a shared
+  fixed size — the bounding box of the pose's drawn parts (both frames)
+  plus an 8px margin. This is why proportions vary meaningfully: idle/walk
+  stay portrait (walk is 93×192 for Emil), while the kick is genuinely
+  landscape (~221×86).
+- **The kick's shape was a deliberate mid-course correction worth
+  remembering** (and worth telling any future artist/AI generating real
+  kick art): a *grounded* standing side-kick keeps the torso upright and
+  stays portrait even with a leg extended — it does NOT naturally read as
+  "wider than tall." To get a real landscape aspect, the kick was rebuilt as
+  a hand-authored **airborne flying kick** with the whole body laid out
+  horizontally (all limbs sharing a similar height band, spread wide in x)
+  — see `pose_kick_air()` in the script.
+- **Frame 0 of most poses is generated, not hand-drawn**, by linearly
+  interpolating each body part's rectangle between its idle position and
+  its full-pose (frame 1) position at t=0.5 — see `lerp_parts()`. Three
+  poses are hand-authored instead because they're structurally unlike a
+  lerp from standing: idle (dedicated subtle "boxer bob"), kick (see
+  above), and knockdown (a lying-down layout with its own small
+  "settle/twitch" second frame).
+- `REAL_ART_POSES` at the top of the script lists which poses to SKIP
+  generating, per character, because real art now exists there — currently
+  `{"emil": {"idle", "punch"}, "aleks": set()}`. **Update this set whenever
+  more real art lands**, so re-running the script never overwrites it.
+
+### Real art: the generation brief
+
+Real frames are being sourced from external AI image generators/agents,
+fed a detailed written brief (character identity + exact hex palette + art
+direction + technical spec + a per-pose frame-count/motion-progression
+table + delivery/naming format). That brief was written once, in
+conversation, for Emil, and is trivially adaptable to Aleks (only the
+identity/palette paragraph changes). It's not currently saved as a file in
+this repo — **if it's needed again, ask for it to be regenerated, or better,
+save it into the repo (e.g. `tools/sprite_generation_brief.md`) next time
+it's produced**, so it isn't a one-off lost to chat history the way the
+sprite generator script almost was (§2's post-milestone notes).
+
+Recommended frame counts reasoned out per pose in that brief (a starting
+point, not a rule — actual counts can and do vary, e.g. idle shipped with 4,
+punch with 5): idle 4, walkForward/walkBack 6, jump 4, crouch 3, punch 5,
+kick 6, uppercut 6, sweep 5, special 7, hitStun 3, launched 5, knockdown 4.
+
+### Fighter animation state (`src/entities/fighter.js`)
+
+Tracks `this.pose`, `this.animFrame`, `this.animTimer`. `updateAnimation()`
+runs every tick from `update()` (not from `render()` — this matters for
+testing, see §6): if the pose changed since last tick, resets to frame 0
+immediately (so an attack's wind-up frame always plays from the start of
+the swing).
+
+**Two different advancement rules, and the distinction matters:**
+
+- **While attacking** (`fsm.is('attacking')` with an `activeMove`): the
+  frame shown is computed directly from the move's own progress —
+  `animFrame = floor((attackFrame / totalMoveFrames) * frameCount)`, where
+  `totalMoveFrames = startup + active + recovery`. This guarantees every
+  frame gets shown exactly once, spread evenly across the move's actual
+  on-screen duration, regardless of frame count or move length.
+- **Every other pose** (idle, walk, jump, crouch, hitStun, launched,
+  knockdown — none of which have a fixed "total duration" to map onto):
+  loops on a flat timer, `ANIM_FRAME_TICKS = 10` ticks per frame, one rate
+  for all of them (a real simplification — a future tuning knob if some
+  should animate faster/slower).
+
+**This distinction exists because of a real bug, caught by testing, worth
+remembering as a pattern:** the flat-timer approach was originally used for
+*every* pose, including attacks. That's fine as long as frame count stays
+low, but the instant Emil's punch went from 2 procedural frames to 5 real
+frames, it broke completely — 5 frames at 10 ticks/frame need 50 ticks to
+cycle through once, but High Punch's entire startup+active+recovery is only
+20 ticks long. Frames 2, 3, and 4 were mathematically unreachable; the move
+would always finish and return to idle while still stuck on frame 0 or 1.
+**The lesson: any time a pose's frame count changes, check whether that
+pose is duration-bound (an attack) or not — a flat animation rate silently
+stops working once frame count and duration drift out of proportion, and it
+fails quietly (no error, just frames never showing) rather than loudly.**
+
+### Display sizing
+
+`drawBody()` computes on-screen size as `sprite.naturalWidth/Height *
+SPRITE_SCALE` (currently `0.74`), anchored bottom-center at the fighter's
+actual `(x, y)`. This is independent of the collision hurtbox (`this.height`,
+still a fixed value per state for gameplay purposes) — the two systems don't
+need to agree, and don't currently. This also means procedural placeholder
+art and real art can have wildly different native pixel dimensions (the real
+Emil frames are a uniform 150×200; procedural poses vary per pose) and still
+render at consistent relative on-screen size, with zero per-pose code.
+
+**To integrate a new batch of real art** (the expected workflow going
+forward): drop the files into `assets/sprites/<character>/` as
+`<pose>_<frameIndex>.png`, update that pose's count in `FRAME_COUNTS` in
+`roster.js`, and add the pose to `REAL_ART_POSES` in
+`tools/generate_sprites.py` so the generator never overwrites it. Check
+whether the pose is duration-bound (an attack move) — if the frame count
+changed meaningfully, sanity-check that `updateAnimation()`'s two rules
+(above) still make sense for it, per the bug that was just caught.
+
+**To add or change PROCEDURAL placeholder sprites**: edit
+`tools/generate_sprites.py` and re-run `python3 tools/generate_sprites.py`
+(requires `pip install pillow` — a one-off authoring dependency, not a game
+runtime dependency). The script is parametric: body parts are named
+rectangles (`head`, `torso`, `sleeve_l`, `hand_r`, etc.) shifted/stretched
+from a base skeleton per character (`EMIL_BASE`/`ALEKS_BASE`). Adding a
+character means adding a `*_BASE` + `*_PALETTE` dict with the same keys and
+a `generate(...)` call. Adding a pose means a new entry in `POSE_NAMES` + a
+case in `build_frames()` (or a simple entry in `DELTA_POSES` if it's a
+lerp-from-idle transform) — then wire the new pose key into `roster.js`'s
+pose list and reference it from a move's `pose` field. **This script was
+reconstructed into the repo specifically so it wouldn't be lost** — it
+originally only existed in an ephemeral agent scratchpad; verified
+byte-identical to the shipped sprites
 before committing.
 
 ---
@@ -293,10 +395,15 @@ they aren't "discovered" as bugs later:
 - **Both characters are mechanically identical.** Same moveset, same combo
   string, same special, same finishers — only cosmetics differ. Real
   per-character movesets are a distinct future project, not a small tweak.
-- **No packed sprite sheet / JSON frame data yet** — 52 separate PNG files,
-  one per pose+frame. Fine at this scale; would want packing if the roster
-  or pose count grows meaningfully.
-- **One shared animation frame rate for all poses** (`ANIM_FRAME_TICKS`).
+- **No packed sprite sheet / JSON frame data yet** — one separate PNG file
+  per pose+frame, growing over time as real art replaces placeholders
+  (Emil alone is already at 31 files across 13 poses with mixed frame
+  counts). Fine at this scale; would want packing if the roster or pose/
+  frame counts grow much further.
+- **Non-attack poses share one animation frame rate** (`ANIM_FRAME_TICKS`)
+  — attack poses no longer do (see §4's duration-mapping fix), but idle/
+  walk/jump/crouch/hitStun/launched/knockdown all still advance at the same
+  flat rate regardless of frame count.
 - **A hit connecting on a jump-airborne target** (as opposed to
   uppercut-`launched`) still snaps to ground-level hit-stun rather than
   falling first — the juggle-refresh logic (§2, milestone 5) only special-
@@ -304,9 +411,12 @@ they aren't "discovered" as bugs later:
 - **No character-select or versus screen** — the brief's Milestone 8/UI
   checklist item for those was never reached; the game starts directly into
   Emil vs. Aleks.
-- **No real recorded audio or art assets** — everything is synthesized
-  (Web Audio) or procedurally generated (Pillow rectangles). This was
-  explicitly permitted/expected by the original brief, not a shortfall.
+- **No real recorded audio yet** — all sound is synthesized (Web Audio).
+  This was explicitly permitted/expected by the original brief, not a
+  shortfall. **Art is a partial exception**: Emil's `idle`/`punch` are real
+  generated art now; everything else on both characters is still
+  procedurally generated (Pillow rectangles), being replaced incrementally
+  (§4).
 - **The AI is intentionally weak** — per the brief's own words, "doesn't
   need to be advanced." Don't "fix" its imperfect block-guessing without
   being asked; that's a feature, not a bug.
@@ -368,23 +478,33 @@ than once:
 
 Nothing here is committed to — this is a menu, not a roadmap promise.
 
-1. **Per-character distinct movesets** — give Emil and Aleks their own
+1. **Keep replacing procedural placeholder art with real art**, in
+   progress: Emil has real `idle`/`punch`; 11 more Emil poses and all 13
+   Aleks poses are still procedural. Each new batch needs: files dropped
+   into `assets/sprites/<character>/`, `FRAME_COUNTS` updated in
+   `roster.js`, the pose added to `REAL_ART_POSES` in
+   `generate_sprites.py`, and (if it's an attack pose) a sanity-check that
+   the duration-mapping animation logic in §4 still makes sense for it.
+   Also worth doing soon: save the sprite-generation brief itself into the
+   repo (e.g. `tools/sprite_generation_brief.md`) rather than re-deriving it
+   from chat each time — see §4's note.
+2. **Per-character distinct movesets** — give Emil and Aleks their own
    normals/specials/finishers instead of sharing everything. The data
    structures already support this (`ROSTER` entries could point at
    character-specific move tables instead of the generic ones); it's
    authoring work, not architecture work.
-2. **More poses/frames** — e.g. a proper 3-4 frame walk cycle instead of 2,
-   dedicated block-stance art (currently `standingBlock`/no dedicated pose
-   falls back to idle), a jump-apex vs. rising vs. falling distinction.
-3. **Character select + versus screen** — the brief's UI checklist items
+3. **More frames on poses that still feel choppy** — e.g. a proper 4-6
+   frame walk cycle (the generation brief's own recommendation) instead of
+   2, dedicated block-stance art (currently `standingBlock`/no dedicated
+   pose falls back to idle), a jump-apex vs. rising vs. falling distinction.
+4. **Character select + versus screen** — the brief's UI checklist items
    that were never reached.
-4. **A real background/stage image** instead of the flat-fill placeholder
+5. **A real background/stage image** instead of the flat-fill placeholder
    in `stage/stage.js`.
-5. **Sprite sheet packing** if the per-file approach starts to feel
-   unwieldy (52 files today; would grow fast with more characters/poses).
-6. **Throws/grabs** if genre-authenticity against block turtling matters.
-7. **Real recorded audio/art**, whenever that's actually available — the
-   architecture is already isolated enough (`audioEngine.js` is the only
-   thing `main.js` calls into for sound; `roster.js` is the only thing that
-   knows sprite paths) that swapping in real assets shouldn't require
-   touching game logic.
+6. **Sprite sheet packing** if the per-file approach starts to feel
+   unwieldy as more real art (with larger, less compressible file sizes
+   than the tiny procedural placeholders) keeps arriving.
+7. **Throws/grabs** if genre-authenticity against block turtling matters.
+8. **Real recorded audio**, whenever that's actually available —
+   `audioEngine.js` is the only thing `main.js` calls into for sound, so
+   swapping in real recordings shouldn't require touching game logic.

@@ -1,21 +1,32 @@
 #!/usr/bin/env python3
-"""Generates every placeholder sprite in assets/sprites/ from scratch.
+"""Generates placeholder sprites into assets/sprites/<character>/ folders.
 
 Run from anywhere with: python3 tools/generate_sprites.py
 Requires Pillow (pip install pillow) — a one-off authoring dependency, not a
 runtime dependency of the game itself (the game stays 100% vanilla JS/Canvas).
 
-This is authoring tooling, not shipped game code. It exists so the sprite set
-is reproducible/extendable later (add a character, add a pose, retune a
-limb position) without having to reverse-engineer the shipped PNGs by hand.
-See VISION.md for the full story of how this evolved.
+This is authoring tooling, not shipped game code. It exists so the
+PROCEDURAL PLACEHOLDER sprite set is reproducible/extendable (add a
+character, add a pose, retune a limb position) without reverse-engineering
+shipped PNGs by hand. See VISION.md for the full story of how this evolved.
+
+IMPORTANT: as real (hand-drawn/AI-generated) art replaces a character's
+placeholder for a given pose, add that pose to REAL_ART_POSES below so this
+script skips it — running this script must never silently overwrite real
+art. Update src/characters/roster.js's FRAME_COUNTS to match whenever a
+pose's frame count changes (real art or otherwise).
 """
 
 from PIL import Image, ImageDraw
 import os
 
-OUT_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "assets", "sprites")
-os.makedirs(OUT_DIR, exist_ok=True)
+SPRITES_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "assets", "sprites")
+
+# Poses that now have real art and must NOT be regenerated procedurally.
+REAL_ART_POSES = {
+    "emil": {"idle", "punch"},
+    "aleks": set(),
+}
 
 # Base skeleton coordinates are authored in this reference space; each pose's
 # actual PNG canvas is auto-cropped to that pose's own content afterward, so
@@ -488,9 +499,16 @@ def render_frame(parts, size, path, palette):
     img.save(path)
 
 
-def generate(base, palette, prefix):
+def generate(base, palette, character):
+    out_dir = os.path.join(SPRITES_DIR, character)
+    os.makedirs(out_dir, exist_ok=True)
+    skip = REAL_ART_POSES.get(character, set())
+
     sizes = {}
     for pose_name in POSE_NAMES:
+        if pose_name in skip:
+            print(f"skipping {character}/{pose_name}: has real art (see REAL_ART_POSES)")
+            continue
         frames = build_frames(base, pose_name)
         bx0, by0, bx1, by1 = bbox_of(frames)
         bx0 -= CANVAS_MARGIN
@@ -501,7 +519,7 @@ def generate(base, palette, prefix):
         sizes[pose_name] = size
         for i, parts in enumerate(frames):
             shifted = {k: shift(v, dx=-bx0, dy=-by0) for k, v in parts.items()}
-            render_frame(shifted, size, os.path.join(OUT_DIR, f"{prefix}_{pose_name}_{i}.png"), palette)
+            render_frame(shifted, size, os.path.join(out_dir, f"{pose_name}_{i}.png"), palette)
     return sizes
 
 
@@ -512,4 +530,5 @@ if __name__ == "__main__":
     print("Emil pose canvas sizes:")
     for k, v in emil_sizes.items():
         print(f"  {k}: {v[0]}x{v[1]}")
-    print("done:", len(POSE_NAMES) * 2 * 2, "sprite files written to", OUT_DIR)
+    total = 2 * (len(emil_sizes) + len(aleks_sizes))
+    print("done:", total, f"procedural sprite files written under {SPRITES_DIR}/<character>/")
