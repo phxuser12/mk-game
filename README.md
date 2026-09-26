@@ -27,7 +27,7 @@ npx serve .
 
 Then open `http://localhost:8000` (or whatever port it prints).
 
-## Controls (Milestone 6)
+## Controls (Milestone 7)
 
 | Action | P1 | P2 |
 | --- | --- | --- |
@@ -98,6 +98,18 @@ Miss the window (or Blood Mode is off and only Barrel Ride was tried) and
 the match just ends on a plain victory screen instead. From the results
 screen, either player pressing High Punch starts a fresh rematch.
 
+## Practice mode (AI opponent)
+
+Press **P** to make P2 an AI opponent — off by default, so normal 2-player
+controls are unaffected until you ask for it. It's deliberately basic, not
+advanced: it walks in when out of range, attacks on a cooldown from the full
+moveset (including uppercut/sweep), and reacts to your swings with a guarded
+block — but it guesses standing vs. crouching about half the time, so it
+won't reliably stop low attacks. It punishes hard once you're in block-stun,
+hit-stun, knocked down, or getting up: attack probability jumps from a
+cooldown-gated roll to guaranteed. Good enough to test combos and blockstrings
+against; not a real opponent.
+
 ## Project structure
 
 ```
@@ -107,6 +119,7 @@ src/
   entities/     Fighter class and its state table, Projectile
   stage/        arena/background rendering, stage bounds
   match/        round/match flow: intro banners, timer, best-of-3 scoring, finisher window
+  ai/           basic single-player opponent (same input shape as a real player, swappable in main.js)
   characters/   per-character data: movesets, combo strings, specials, finishers, sprite refs (shared placeholder data for now)
   ui/           HUD: health bars, combo counter, round timer/pips, match banners
   debug/        hitbox/hurtbox/projectile debug overlay
