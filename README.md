@@ -1,8 +1,12 @@
-# mk-fighter
+# mk-fighter — Blood Circuit
 
 2D side-view, one-on-one arcade fighting game. Original characters, lore, and
 finisher terminology — inspired by the mechanics and tone of mid-90s
 button-combo fighters, nothing copyrighted reused.
+
+**Premise**: an underground bare-knuckle tournament recurring every
+generation in a condemned steel-mill city, run by a shadow syndicate. Win
+the circuit or don't leave it.
 
 No build step: plain HTML5 Canvas + vanilla JS ES modules.
 
@@ -23,7 +27,7 @@ npx serve .
 
 Then open `http://localhost:8000` (or whatever port it prints).
 
-## Controls (Milestone 5)
+## Controls (Milestone 6)
 
 | Action | P1 | P2 |
 | --- | --- | --- |
@@ -71,18 +75,40 @@ uppercut's own hitbox spans low-to-high specifically so it can anti-air and
 juggle.
 
 Press `` ` `` (backtick) to toggle the hitbox/hurtbox debug overlay (green =
-hurtbox, red = active hitbox, orange = projectile).
+hurtbox, red = active hitbox, orange = projectile). Press **B** to toggle
+Blood Mode (on by default) — see Finishers below.
+
+## Round structure & finishers
+
+Best of 3 rounds, 99-second round clock. Time-up goes to whoever has more
+health (exact tie = a "DOUBLE K.O." draw round — no one scores, play
+continues). Round-win pips sit above each health bar.
+
+When a fighter clinches the match (their 2nd round win) **via a clean KO**
+— not a time-up decision — the announcer calls **"END IT!"** and opens a
+~3-second finisher window. The winner has one code each for two original
+finishers, entered the same tap-motion way as a special move:
+
+| Finisher | Type | Input | Gore-gated? |
+| --- | --- | --- | --- |
+| Foundry End | Brutal | Down, Down + High Kick | Yes (Blood Mode must be on) |
+| Barrel Ride | Non-violent | Up, Up + Low Punch | No, always available |
+
+Miss the window (or Blood Mode is off and only Barrel Ride was tried) and
+the match just ends on a plain victory screen instead. From the results
+screen, either player pressing High Punch starts a fresh rematch.
 
 ## Project structure
 
 ```
 index.html
 src/
-  engine/       game loop, input, state machine, collision, combat (hitbox/hurtbox), shared constants
-  entities/     Fighter class and its state table
+  engine/       game loop, input, state machine, collision, combat (hitbox/hurtbox), motion buffer, shared constants
+  entities/     Fighter class and its state table, Projectile
   stage/        arena/background rendering, stage bounds
-  characters/   per-character data: movesets, combo strings, specials, sprite refs (shared placeholder data for now)
-  ui/           HUD: health bars, combo counter (done); round timer lands in Milestone 6
+  match/        round/match flow: intro banners, timer, best-of-3 scoring, finisher window
+  characters/   per-character data: movesets, combo strings, specials, finishers, sprite refs (shared placeholder data for now)
+  ui/           HUD: health bars, combo counter, round timer/pips, match banners
   debug/        hitbox/hurtbox/projectile debug overlay
 assets/
   sprites/      placeholder boxes for now; sprite sheets land here later

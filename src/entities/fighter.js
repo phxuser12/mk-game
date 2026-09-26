@@ -6,13 +6,21 @@ import { fighterStates } from './fighterStates.js';
 
 export class Fighter {
   constructor({ x, facing, color, label }) {
+    this.color = color;
+    this.label = label;
+    this.fsm = new StateMachine(this, fighterStates, 'idle'); // must exist before reset() calls fsm.transition
+    this.reset(x, facing);
+  }
+
+  // Reinitializes everything mutable for a fresh round, keeping the same
+  // object (color/label/fsm stay put) so main.js never has to re-wire
+  // references. Called once at construction and again by Match between rounds.
+  reset(x, facing) {
     this.x = x;
     this.y = STAGE.GROUND_Y; // feet position; only the jump state moves this
     this.vx = 0;
     this.vy = 0;
     this.facing = facing; // 1 = facing right, -1 = facing left
-    this.color = color;
-    this.label = label;
     this.width = FIGHTER.STAND_WIDTH;
     this.height = FIGHTER.STAND_HEIGHT;
 
@@ -36,7 +44,7 @@ export class Fighter {
     this.pendingProjectile = null; // set by fighterStates.js; main.js reads it, spawns a Projectile, and clears it
     this.motionBuffer = new MotionBuffer(); // recent directional taps, checked against special-move input patterns
 
-    this.fsm = new StateMachine(this, fighterStates, 'idle');
+    this.fsm.transition('idle');
   }
 
   get isCrouching() {

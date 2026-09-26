@@ -34,11 +34,12 @@ export class MotionBuffer {
   }
 }
 
-// 'down' takes priority over horizontal: a diagonal charge isn't a pattern
-// this game supports, keeping the two example motions (back-back-forward,
-// down-down) unambiguous.
+// 'down'/'up' take priority over horizontal: a diagonal charge isn't a
+// pattern this game supports, keeping the example motions (back-back-
+// forward, down-down, up-up) unambiguous.
 export function computeMotionDir(input, facing) {
   if (input.down) return 'down';
+  if (input.up) return 'up';
   const raw = (input.left ? -1 : 0) + (input.right ? 1 : 0);
   if (raw === 0) return 'neutral';
   return raw === facing ? 'forward' : 'back';

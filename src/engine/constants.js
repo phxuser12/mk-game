@@ -33,3 +33,12 @@ export const COMBAT = {
   COMBO_DISPLAY_FRAMES: 90, // how long the combo counter UI lingers after the last hit
   JUGGLE_POP_VELOCITY: 400, // px/sec upward refresh when a follow-up hit lands on an airborne target
 };
+
+export const MATCH = {
+  ROUND_SECONDS: 99,
+  ROUNDS_TO_WIN: 2,
+  ROUND_INTRO_FRAMES: 90, // ~1.5s banner before a round starts
+  ROUND_END_FRAMES: 120, // ~2s pause showing the round result
+  FINISHER_WINDOW_FRAMES: 180, // ~3s to input a finisher once the match is clinched
+  FINISHER_PLAY_FRAMES: 90, // ~1.5s finisher animation
+};
