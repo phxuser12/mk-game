@@ -14,6 +14,13 @@ export class Fighter {
     this.label = label;
     this.width = FIGHTER.STAND_WIDTH;
     this.height = FIGHTER.STAND_HEIGHT;
+
+    this.health = 100;
+    this.hitFlashFrames = 0; // ticks remaining on the white "just got hit" flash
+    this.activeMove = null; // set while attacking; read by combat.js for hitbox data
+    this.attackFrame = 0;
+    this.currentAttackHasHit = false;
+
     this.fsm = new StateMachine(this, fighterStates, 'idle');
   }
 
@@ -25,9 +32,14 @@ export class Fighter {
     return this.fsm.is('jump');
   }
 
-  // Fighters always turn to face each other. Later milestones lock this
-  // during committed actions (attacks, hit-stun) by guarding the call site.
+  get isAttacking() {
+    return this.fsm.is('attacking');
+  }
+
+  // Fighters always turn to face each other, except mid-attack: classic
+  // fighters lock facing once a swing starts so it can't be redirected.
   updateFacing(opponent) {
+    if (this.isAttacking) return;
     this.facing = opponent.x >= this.x ? 1 : -1;
   }
 
@@ -39,12 +51,14 @@ export class Fighter {
 
     this.x += this.vx * dt;
     this.x = clamp(this.x, STAGE.LEFT_WALL + this.width / 2, STAGE.RIGHT_WALL - this.width / 2);
+
+    if (this.hitFlashFrames > 0) this.hitFlashFrames -= 1;
   }
 
   draw(ctx) {
     const top = this.y - this.height;
 
-    ctx.fillStyle = this.color;
+    ctx.fillStyle = this.hitFlashFrames > 0 ? '#ffffff' : this.color;
     ctx.fillRect(this.x - this.width / 2, top, this.width, this.height);
 
     // Nose triangle so facing direction reads clearly on a plain box.

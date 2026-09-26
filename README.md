@@ -23,28 +23,32 @@ npx serve .
 
 Then open `http://localhost:8000` (or whatever port it prints).
 
-## Controls (Milestone 1)
+## Controls (Milestone 2)
 
 | Action | P1 | P2 |
 | --- | --- | --- |
 | Move | A / D | Left / Right |
 | Crouch | S | Down |
 | Jump | W | Up |
+| High Punch (attack) | F | Numpad 4 |
 
-Attack buttons (P1: F/G/H/J, P2: Numpad 4/5/6/2) are wired into input reading
-already but don't do anything until Milestone 2.
+Low Punch/High Kick/Low Kick (P1: G/H/J, P2: Numpad 5/6/2) are wired into
+input reading already but don't do anything until Milestone 4's full moveset.
+
+Press `` ` `` (backtick) to toggle the hitbox/hurtbox debug overlay (green =
+hurtbox, red = active hitbox).
 
 ## Project structure
 
 ```
 index.html
 src/
-  engine/       game loop, input, state machine, collision, shared constants
+  engine/       game loop, input, state machine, collision, combat (hitbox/hurtbox), shared constants
   entities/     Fighter class and its state table
   stage/        arena/background rendering, stage bounds
-  characters/   per-character data: movesets, frame data, sprite refs (empty until Milestone 5+)
-  ui/           HUD: health bars, timer, combo counter (empty until Milestone 3+)
-  debug/        hitbox/hurtbox debug overlay (empty until Milestone 2+)
+  characters/   per-character data: movesets, frame data, sprite refs (shared placeholder moveset for now)
+  ui/           HUD: health bars (done); timer, combo counter land in Milestone 6
+  debug/        hitbox/hurtbox debug overlay
 assets/
   sprites/      placeholder boxes for now; sprite sheets land here later
   audio/        SFX + music, hooked up in Milestone 8

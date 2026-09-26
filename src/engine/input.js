@@ -63,6 +63,16 @@ export class InputManager {
       lp: this.pressed.has(b.lp),
       hk: this.pressed.has(b.hk),
       lk: this.pressed.has(b.lk),
+      hpPressed: this.justPressed.has(b.hp),
+      lpPressed: this.justPressed.has(b.lp),
+      hkPressed: this.justPressed.has(b.hk),
+      lkPressed: this.justPressed.has(b.lk),
     };
+  }
+
+  // For non-player bindings (e.g. the debug overlay toggle) that aren't part
+  // of either player's control scheme.
+  wasPressed(code) {
+    return this.justPressed.has(code);
   }
 }

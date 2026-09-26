@@ -9,10 +9,14 @@
 //   crouch        -> idle                   on down released
 //   idle/walk     -> jump                   on up pressed (grounded only)
 //   jump          -> idle                   on landing (y reaches ground, vy >= 0)
-// Attacking/hit-stun/blocking states plug into this same table in later
-// milestones and will add their own guards against illegal interruption.
+//   idle/walk     -> attacking              on attack button pressed (grounded only)
+//   attacking     -> idle                   once startup+active+recovery frames elapse
+// attacking is not interruptible: no movement, jumping, or re-attacking until
+// recovery finishes. Hit-stun/blocking states plug into this same table in
+// later milestones with their own guards.
 
 import { STAGE, PHYSICS } from '../engine/constants.js';
+import { GENERIC_MOVES } from '../characters/genericMoves.js';
 
 function readMoveDir(input) {
   const left = input.left ? -1 : 0;
@@ -26,6 +30,7 @@ export const fighterStates = {
       f.vx = 0;
     },
     update(f, dt, input) {
+      if (input.hpPressed) return f.fsm.transition('attacking');
       if (input.jumpPressed) return f.fsm.transition('jump');
       if (input.down) return f.fsm.transition('crouch');
       const moveDir = readMoveDir(input);
@@ -37,6 +42,7 @@ export const fighterStates = {
 
   walkForward: {
     update(f, dt, input) {
+      if (input.hpPressed) return f.fsm.transition('attacking');
       if (input.jumpPressed) return f.fsm.transition('jump');
       if (input.down) return f.fsm.transition('crouch');
       const moveDir = readMoveDir(input);
@@ -48,6 +54,7 @@ export const fighterStates = {
 
   walkBack: {
     update(f, dt, input) {
+      if (input.hpPressed) return f.fsm.transition('attacking');
       if (input.jumpPressed) return f.fsm.transition('jump');
       if (input.down) return f.fsm.transition('crouch');
       const moveDir = readMoveDir(input);
@@ -80,6 +87,26 @@ export const fighterStates = {
         f.vy = 0;
         f.fsm.transition('idle');
       }
+    },
+  },
+
+  attacking: {
+    enter(f) {
+      f.vx = 0; // rooted for this milestone's single normal; movement normals arrive later
+      f.attackFrame = 0;
+      f.currentAttackHasHit = false;
+      f.activeMove = GENERIC_MOVES.highPunch;
+    },
+    update(f) {
+      f.attackFrame += 1;
+      const total = f.activeMove.startup + f.activeMove.active + f.activeMove.recovery;
+      if (f.attackFrame >= total) {
+        f.activeMove = null;
+        f.fsm.transition('idle');
+      }
+    },
+    exit(f) {
+      f.activeMove = null;
     },
   },
 };
