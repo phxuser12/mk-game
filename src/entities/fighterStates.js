@@ -73,6 +73,7 @@ export const fighterStates = {
     update(f, dt, input) {
       f.vx = readMoveDir(input) * PHYSICS.AIR_CONTROL_SPEED;
       f.vy += PHYSICS.GRAVITY * dt;
+      f.y += f.vy * dt;
 
       if (f.y >= STAGE.GROUND_Y && f.vy >= 0) {
         f.y = STAGE.GROUND_Y;
