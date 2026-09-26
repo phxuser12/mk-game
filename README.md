@@ -8,6 +8,12 @@ button-combo fighters, nothing copyrighted reused.
 generation in a condemned steel-mill city, run by a shadow syndicate. Win
 the circuit or don't leave it.
 
+**Roster**: **Krug** (P1) — a broad-shouldered foundry brawler in a helmet
+and rust-red apron. **Vesper** (P2) — a leaner, hooded scrapper in a blue
+wrap. Both currently share the exact same moveset/frame data (see
+`src/characters/genericMoves.js` etc.) — only their sprite and name are
+distinct so far; per-character movesets are future work.
+
 No build step: plain HTML5 Canvas + vanilla JS ES modules.
 
 ## Running it
@@ -137,11 +143,13 @@ src/
   ai/           basic single-player opponent (same input shape as a real player, swappable in main.js)
   fx/           particle bursts, trauma-based screen shake
   audio/        synthesized SFX, announcer stings, background music loop
-  characters/   per-character data: movesets, combo strings, specials, finishers, sprite refs (shared placeholder data for now)
+  characters/   roster (name/color/sprite per character) + shared movesets, combo strings, specials, finishers
   ui/           HUD: health bars, combo counter, round timer/pips, match banners
   debug/        hitbox/hurtbox/projectile debug overlay
 assets/
-  sprites/      placeholder boxes for now; sprite sheets land here later
+  sprites/      krug_idle.png, vesper_idle.png — single static pose per character;
+                squash/stretch onto the existing hitbox covers crouch/knockdown for now,
+                full per-pose sprite sheets + frame data are future work
   audio/        reserved for real recorded SFX/music, once they exist
 ```
 

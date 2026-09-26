@@ -4,6 +4,7 @@ import { resolveOverlap } from './engine/collision.js';
 import { resolveAttacks, resolveProjectileHit } from './engine/combat.js';
 import { Fighter } from './entities/fighter.js';
 import { Projectile } from './entities/projectile.js';
+import { ROSTER } from './characters/roster.js';
 import { STAGE } from './engine/constants.js';
 import { drawStage } from './stage/stage.js';
 import { drawHealthBars } from './ui/healthBar.js';
@@ -24,11 +25,12 @@ const canvas = document.getElementById('game');
 canvas.width = STAGE.WIDTH;
 canvas.height = STAGE.HEIGHT;
 const ctx = canvas.getContext('2d');
+ctx.imageSmoothingEnabled = false; // crisp pixel-art scaling, not blurry
 
 const input = new InputManager();
 
-const p1 = new Fighter({ x: 300, facing: 1, color: '#c0392b', label: 'P1' });
-const p2 = new Fighter({ x: 660, facing: -1, color: '#2980b9', label: 'P2' });
+const p1 = new Fighter({ x: 300, facing: 1, character: ROSTER.krug });
+const p2 = new Fighter({ x: 660, facing: -1, character: ROSTER.vesper });
 
 const match = new Match();
 match.startMatch(p1, p2);

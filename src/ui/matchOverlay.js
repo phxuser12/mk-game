@@ -50,9 +50,10 @@ function roundEndHeadline(match) {
   return 'DOUBLE K.O.';
 }
 
-function roundEndSubline(match) {
+function roundEndSubline(match, p1, p2) {
   if (!match.winnerKey) return 'NO WINNER THIS ROUND';
-  return `${match.winnerKey.toUpperCase()} WINS THE BOUT`;
+  const winner = match.winnerKey === 'p1' ? p1 : p2;
+  return `${winner.label} WINS THE BOUT`;
 }
 
 function drawFinisherPlaying(ctx, match, p1, p2) {
@@ -80,8 +81,10 @@ function drawFinisherPlaying(ctx, match, p1, p2) {
   }
 }
 
-function matchEndHeadline(match) {
-  return match.winnerKey ? `${match.winnerKey.toUpperCase()} WINS THE CIRCUIT` : 'THE CIRCUIT DRAWS BLOOD FROM NO ONE';
+function matchEndHeadline(match, p1, p2) {
+  if (!match.winnerKey) return 'THE CIRCUIT DRAWS BLOOD FROM NO ONE';
+  const winner = match.winnerKey === 'p1' ? p1 : p2;
+  return `${winner.label} WINS THE CIRCUIT`;
 }
 
 export function drawMatchOverlay(ctx, match, p1, p2) {
@@ -93,7 +96,7 @@ export function drawMatchOverlay(ctx, match, p1, p2) {
       drawBanner(ctx, [`ROUND ${match.roundNumber}`, 'DRAW BLOOD!']);
       break;
     case PHASE.ROUND_END:
-      drawBanner(ctx, [roundEndHeadline(match), roundEndSubline(match)]);
+      drawBanner(ctx, [roundEndHeadline(match), roundEndSubline(match, p1, p2)]);
       break;
     case PHASE.FINISHER_WINDOW:
       drawBanner(ctx, ['END IT!'], { color: '#e74c3c' });
@@ -102,7 +105,7 @@ export function drawMatchOverlay(ctx, match, p1, p2) {
       drawFinisherPlaying(ctx, match, p1, p2);
       break;
     case PHASE.MATCH_END:
-      drawBanner(ctx, [matchEndHeadline(match), 'HIGH PUNCH TO FIGHT AGAIN']);
+      drawBanner(ctx, [matchEndHeadline(match, p1, p2), 'HIGH PUNCH TO FIGHT AGAIN']);
       break;
     default:
       break;

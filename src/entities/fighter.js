@@ -5,9 +5,11 @@ import { MotionBuffer, computeMotionDir } from '../engine/motionBuffer.js';
 import { fighterStates } from './fighterStates.js';
 
 export class Fighter {
-  constructor({ x, facing, color, label }) {
-    this.color = color;
-    this.label = label;
+  constructor({ x, facing, character }) {
+    this.color = character.color; // fallback fill until the sprite finishes loading
+    this.label = character.name;
+    this.sprite = new Image();
+    this.sprite.src = character.spritePath;
     this.fsm = new StateMachine(this, fighterStates, 'idle'); // must exist before reset() calls fsm.transition
     this.reset(x, facing);
   }
@@ -86,11 +88,12 @@ export class Fighter {
 
   draw(ctx) {
     const top = this.y - this.height;
+    const left = this.x - this.width / 2;
 
-    ctx.fillStyle = this.hitFlashFrames > 0 ? '#ffffff' : this.color;
-    ctx.fillRect(this.x - this.width / 2, top, this.width, this.height);
+    this.drawBody(ctx, left, top);
 
-    // Nose triangle so facing direction reads clearly on a plain box.
+    // Nose triangle so facing direction reads clearly even on roughly
+    // symmetric placeholder art.
     ctx.fillStyle = '#fff';
     const noseX = this.x + this.facing * (this.width / 2);
     ctx.beginPath();
@@ -104,5 +107,35 @@ export class Fighter {
     ctx.font = '12px monospace';
     ctx.textAlign = 'center';
     ctx.fillText(`${this.label} [${this.fsm.current}]`, this.x, top - 8);
+  }
+
+  // Squashes/stretches the single static sprite onto the same bounding box
+  // the flat-color box used to fill, so crouch/knockdown's height changes
+  // still read as a pose change without needing per-pose art yet. Falls
+  // back to a flat-color rect if the sprite hasn't finished loading.
+  drawBody(ctx, left, top) {
+    const spriteReady = this.sprite.complete && this.sprite.naturalWidth > 0;
+
+    if (!spriteReady) {
+      ctx.fillStyle = this.hitFlashFrames > 0 ? '#ffffff' : this.color;
+      ctx.fillRect(left, top, this.width, this.height);
+      return;
+    }
+
+    ctx.save();
+    if (this.facing === -1) {
+      ctx.translate(this.x, 0);
+      ctx.scale(-1, 1);
+      ctx.translate(-this.x, 0);
+    }
+    ctx.drawImage(this.sprite, left, top, this.width, this.height);
+    if (this.hitFlashFrames > 0) {
+      // Paints solid white only where the sprite already drew opaque
+      // pixels — a cheap "flash white" silhouette without a shader.
+      ctx.globalCompositeOperation = 'source-atop';
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
+      ctx.fillRect(left, top, this.width, this.height);
+    }
+    ctx.restore();
   }
 }
