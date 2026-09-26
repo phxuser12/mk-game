@@ -81,7 +81,14 @@ function applyCleanHitEffect(defender, move) {
   }
 }
 
+// Impact point for FX (particles/shake/sound) — roughly the defender's chest.
+function impactPoint(defender) {
+  return { x: defender.x, y: defender.y - defender.height / 2 };
+}
+
 // Mutates attacker (marks its swing resolved) and defender (damage, knockback, stun state).
+// Returns { hitStop, event } — event carries what fx.js/audioEngine.js need
+// to react (impact point, whether it was blocked, whether it should hit hard).
 function applyHit(attacker, defender, { move, blocked }) {
   attacker.currentAttackHasHit = true;
   const knockback = (blocked ? move.chipKnockback : move.knockback) * attacker.facing;
@@ -92,7 +99,7 @@ function applyHit(attacker, defender, { move, blocked }) {
     defender.hitFlashFrames = 3;
     defender.stunFrames = move.blockStunFrames;
     defender.fsm.transition('blockStun');
-    return BLOCK_STOP_FRAMES;
+    return { hitStop: BLOCK_STOP_FRAMES, event: { ...impactPoint(defender), blocked: true, heavy: false } };
   }
 
   defender.health = Math.max(0, defender.health - move.damage);
@@ -100,25 +107,37 @@ function applyHit(attacker, defender, { move, blocked }) {
   creditCombo(attacker, move.damage);
   applyCleanHitEffect(defender, move);
 
-  return HIT_STOP_FRAMES;
+  const heavy = move.onHit === 'launch' || move.onHit === 'knockdown' || defender.health <= 0;
+  return { hitStop: HIT_STOP_FRAMES, event: { ...impactPoint(defender), blocked: false, heavy } };
 }
 
-// Returns the number of hit-stop ticks to apply this frame (0 if nothing landed).
+// Returns { hitStop, events }: the ticks to freeze for, and 0-2 impact
+// events (both fighters can land a hit on the same tick in a trade).
 export function resolveAttacks(a, b) {
   const hitOnB = computeHit(a, b);
   const hitOnA = computeHit(b, a);
 
   let hitStop = 0;
-  if (hitOnB) hitStop = Math.max(hitStop, applyHit(a, b, hitOnB));
-  if (hitOnA) hitStop = Math.max(hitStop, applyHit(b, a, hitOnA));
-  return hitStop;
+  const events = [];
+  if (hitOnB) {
+    const result = applyHit(a, b, hitOnB);
+    hitStop = Math.max(hitStop, result.hitStop);
+    events.push(result.event);
+  }
+  if (hitOnA) {
+    const result = applyHit(b, a, hitOnA);
+    hitStop = Math.max(hitStop, result.hitStop);
+    events.push(result.event);
+  }
+  return { hitStop, events };
 }
 
 // Projectiles aren't a Fighter (no fsm/facing/activeMove), so they get their
 // own resolve function rather than shoehorning into computeHit/applyHit.
+// Returns { hitStop, event } (event is null if nothing connected this tick).
 export function resolveProjectileHit(projectile, defender) {
-  if (!projectile.alive) return 0;
-  if (!overlaps(projectile.getBox(), getHurtbox(defender))) return 0;
+  if (!projectile.alive) return { hitStop: 0, event: null };
+  if (!overlaps(projectile.getBox(), getHurtbox(defender))) return { hitStop: 0, event: null };
 
   projectile.alive = false; // consumed on impact whether blocked or not
   const blocked = projectile.low ? defender.fsm.is('crouchBlock') : defender.fsm.is('standingBlock');
@@ -129,7 +148,7 @@ export function resolveProjectileHit(projectile, defender) {
     defender.hitFlashFrames = 3;
     defender.stunFrames = projectile.blockStunFrames;
     defender.fsm.transition('blockStun');
-    return BLOCK_STOP_FRAMES;
+    return { hitStop: BLOCK_STOP_FRAMES, event: { ...impactPoint(defender), blocked: true, heavy: false } };
   }
 
   defender.health = Math.max(0, defender.health - projectile.damage);
@@ -143,5 +162,5 @@ export function resolveProjectileHit(projectile, defender) {
     defender.fsm.transition('hitStun');
   }
 
-  return HIT_STOP_FRAMES;
+  return { hitStop: HIT_STOP_FRAMES, event: { ...impactPoint(defender), blocked: false, heavy: defender.health <= 0 } };
 }

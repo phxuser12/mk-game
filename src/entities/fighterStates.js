@@ -85,6 +85,7 @@ function startAttack(f, moveKey) {
   f.attackFrame = 0;
   f.currentAttackHasHit = false;
   f.projectileSpawned = false;
+  f.activationSoundFired = false;
   f.activeMove = MOVES[moveKey];
 }
 
@@ -225,12 +226,19 @@ export const fighterStates = {
       const activeEnd = move.startup + move.active;
       const totalFrames = activeEnd + move.recovery;
 
-      // Projectile moves hand off to a traveling entity the instant the
-      // active window opens; main.js reads pendingProjectile off the fighter
-      // and spawns it, then clears the flag.
-      if (move.projectile && !f.projectileSpawned && f.attackFrame === move.startup + 1) {
-        f.projectileSpawned = true;
-        f.pendingProjectile = { move, x: f.x, y: f.y, facing: f.facing };
+      // The instant the active window opens: flag it for main.js (which
+      // plays the whiff/special activation sound off this, clearing it
+      // after), and projectile moves additionally hand off to a traveling
+      // entity here since the caster's own body never carries their hitbox.
+      if (f.attackFrame === move.startup + 1) {
+        if (!f.activationSoundFired) {
+          f.activationSoundFired = true;
+          f.justBecameActive = true;
+        }
+        if (move.projectile && !f.projectileSpawned) {
+          f.projectileSpawned = true;
+          f.pendingProjectile = { move, x: f.x, y: f.y, facing: f.facing };
+        }
       }
 
       // Chain-cancel window: anywhere during recovery, the correct next

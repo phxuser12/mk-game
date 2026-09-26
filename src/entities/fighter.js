@@ -42,6 +42,8 @@ export class Fighter {
 
     this.projectileSpawned = false; // guards a projectile move from spawning more than once per swing
     this.pendingProjectile = null; // set by fighterStates.js; main.js reads it, spawns a Projectile, and clears it
+    this.activationSoundFired = false; // guards justBecameActive from firing more than once per swing
+    this.justBecameActive = false; // set by fighterStates.js; main.js reads it to play the whiff/special sound, and clears it
     this.motionBuffer = new MotionBuffer(); // recent directional taps, checked against special-move input patterns
 
     this.fsm.transition('idle');

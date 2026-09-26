@@ -27,7 +27,7 @@ npx serve .
 
 Then open `http://localhost:8000` (or whatever port it prints).
 
-## Controls (Milestone 7)
+## Controls (Milestone 8)
 
 | Action | P1 | P2 |
 | --- | --- | --- |
@@ -76,7 +76,7 @@ juggle.
 
 Press `` ` `` (backtick) to toggle the hitbox/hurtbox debug overlay (green =
 hurtbox, red = active hitbox, orange = projectile). Press **B** to toggle
-Blood Mode (on by default) — see Finishers below.
+Blood Mode (on by default) — see Finishers below. Press **M** to mute.
 
 ## Round structure & finishers
 
@@ -110,6 +110,21 @@ hit-stun, knocked down, or getting up: attack probability jumps from a
 cooldown-gated roll to guaranteed. Good enough to test combos and blockstrings
 against; not a real opponent.
 
+## Polish: shake, particles, sound
+
+No audio assets exist yet, so every sound is a synthesized placeholder (Web
+Audio oscillators/noise) — hit impacts, whiffs, a special's charge-up zap, a
+block clank, announcer stings between rounds, and a sparse looping bass pulse
+for music while a round is live. All swappable for real recordings later
+without touching any other system, since main.js is the only thing that
+calls into `src/audio/audioEngine.js`.
+
+Clean hits and finishers throw a particle burst — red/blood-toned if Blood
+Mode is on, yellow/white "impact spark" if it's off, so turning gore off is
+a real "clean mode," not just a finisher gate. Bigger hits (uppercuts,
+sweeps, KOs, finishers) get a noticeably bigger burst and a harder screen
+shake; blocked hits get a small gray clash-spark instead.
+
 ## Project structure
 
 ```
@@ -120,12 +135,14 @@ src/
   stage/        arena/background rendering, stage bounds
   match/        round/match flow: intro banners, timer, best-of-3 scoring, finisher window
   ai/           basic single-player opponent (same input shape as a real player, swappable in main.js)
+  fx/           particle bursts, trauma-based screen shake
+  audio/        synthesized SFX, announcer stings, background music loop
   characters/   per-character data: movesets, combo strings, specials, finishers, sprite refs (shared placeholder data for now)
   ui/           HUD: health bars, combo counter, round timer/pips, match banners
   debug/        hitbox/hurtbox/projectile debug overlay
 assets/
   sprites/      placeholder boxes for now; sprite sheets land here later
-  audio/        SFX + music, hooked up in Milestone 8
+  audio/        reserved for real recorded SFX/music, once they exist
 ```
 
 Character visuals/movesets are meant to be data-driven (sprite sheet + frame
