@@ -11,8 +11,18 @@ the circuit or don't leave it.
 **Roster**: **Emil** (P1) — a broad-shouldered foundry brawler in a helmet
 and rust-red apron. **Aleks** (P2) — a leaner, hooded scrapper in a blue
 wrap. Both currently share the exact same moveset/frame data (see
-`src/characters/genericMoves.js` etc.) — only their sprite and name are
+`src/characters/genericMoves.js` etc.) — only their sprites and name are
 distinct so far; per-character movesets are future work.
+
+Each has 13 placeholder pose sprites — idle, walk forward/back, jump, crouch,
+punch, kick, uppercut, sweep, special, standing hit-reaction, airborne/
+launched, and knockdown (see `src/characters/roster.js`) — selected per tick
+from the fighter's current state by `poseKeyFor()` in `src/entities/fighter.js`.
+High/Low Punch share the punch pose and High/Low Kick share the kick pose
+rather than each move getting its own art. Sprites draw at a fixed frame
+size anchored to the fighter's feet, not squashed to the collision box, so
+crouch/knockdown/launched read as actual poses instead of a stretched idle
+image.
 
 No build step: plain HTML5 Canvas + vanilla JS ES modules.
 
@@ -147,9 +157,9 @@ src/
   ui/           HUD: health bars, combo counter, round timer/pips, match banners
   debug/        hitbox/hurtbox/projectile debug overlay
 assets/
-  sprites/      emil_idle.png, aleks_idle.png — single static pose per character;
-                squash/stretch onto the existing hitbox covers crouch/knockdown for now,
-                full per-pose sprite sheets + frame data are future work
+  sprites/      13 poses x 2 characters (emil_*.png, aleks_*.png) — one static
+                image per pose, no animation frames within a pose yet; real
+                sprite sheets + frame-by-frame animation are future work
   audio/        reserved for real recorded SFX/music, once they exist
 ```
 

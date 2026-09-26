@@ -28,5 +28,6 @@ export const GENERIC_SPECIALS = {
     projectileOffsetY: 95, // spawn height above the feet, roughly chest level
     projectileLifetimeFrames: 90, // despawns after ~1.5s if it never connects
     input: { sequence: ['back', 'back', 'forward'], button: 'hpPressed', maxFrames: 18 },
+    pose: 'special',
   },
 };

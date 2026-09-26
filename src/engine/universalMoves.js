@@ -18,6 +18,7 @@ export const UNIVERSAL_MOVES = {
     launchVelocity: 700, // px/sec upward pop on a clean hit
     onHit: 'launch',
     hitbox: { offsetY: 0, width: 40, height: 140 }, // arcs through the whole body: low to high
+    pose: 'uppercut',
   },
   sweep: {
     startup: 8,
@@ -31,5 +32,6 @@ export const UNIVERSAL_MOVES = {
     chipKnockback: 60,
     onHit: 'knockdown',
     hitbox: { offsetY: 10, width: 55, height: 18 },
+    pose: 'sweep',
   },
 };

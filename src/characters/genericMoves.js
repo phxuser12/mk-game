@@ -25,6 +25,7 @@ export const GENERIC_MOVES = {
     knockback: 260, // px/sec pushback on a clean hit
     chipKnockback: 80, // px/sec pushback on a blocked hit
     hitbox: { offsetY: 100, width: 45, height: 20 },
+    pose: 'punch', // sprite pose key; High/Low Punch share one pose sprite
   },
   lowPunch: {
     startup: 3,
@@ -38,6 +39,7 @@ export const GENERIC_MOVES = {
     knockback: 140,
     chipKnockback: 50,
     hitbox: { offsetY: 95, width: 35, height: 18 },
+    pose: 'punch',
   },
   highKick: {
     startup: 9,
@@ -51,6 +53,7 @@ export const GENERIC_MOVES = {
     knockback: 300,
     chipKnockback: 90,
     hitbox: { offsetY: 110, width: 55, height: 22 },
+    pose: 'kick', // High/Low Kick share one pose sprite
   },
   lowKick: {
     startup: 5,
@@ -64,5 +67,6 @@ export const GENERIC_MOVES = {
     knockback: 180,
     chipKnockback: 60,
     hitbox: { offsetY: 20, width: 50, height: 18 },
+    pose: 'kick',
   },
 };

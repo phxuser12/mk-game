@@ -4,12 +4,55 @@ import { clamp } from '../engine/utils.js';
 import { MotionBuffer, computeMotionDir } from '../engine/motionBuffer.js';
 import { fighterStates } from './fighterStates.js';
 
+// Sprites are authored on a wider/taller canvas (150x195) than the original
+// 90x180 so swung limbs and raised heads (punch/kick/sweep/jump/etc.) have
+// room without clipping. These are that canvas's dimensions scaled down by
+// the same ratio the original 90x180 art used to map onto the fighter's
+// collision box (60x140), so the character's actual body renders at the
+// same apparent size — the extra canvas space is just margin, not zoom.
+const SPRITE_FRAME_WIDTH = 100;
+const SPRITE_FRAME_HEIGHT = 152;
+
+// Maps fsm state (+ active move, while attacking) to a sprite pose key.
+// Falls back to 'idle' for states with no dedicated pose yet (block stances,
+// running reuses the walk-forward art).
+function poseKeyFor(fighter) {
+  switch (fighter.fsm.current) {
+    case 'walkForward':
+    case 'running':
+      return 'walkForward';
+    case 'walkBack':
+      return 'walkBack';
+    case 'jump':
+      return 'jump';
+    case 'crouch':
+    case 'crouchBlock':
+      return 'crouch';
+    case 'attacking':
+      return (fighter.activeMove && fighter.activeMove.pose) || 'punch';
+    case 'hitStun':
+    case 'blockStun':
+      return 'hitStun';
+    case 'launched':
+      return 'launched';
+    case 'knockdown':
+    case 'gettingUp':
+      return 'knockdown';
+    default:
+      return 'idle';
+  }
+}
+
 export class Fighter {
   constructor({ x, facing, character }) {
-    this.color = character.color; // fallback fill until the sprite finishes loading
+    this.color = character.color; // fallback fill until a sprite finishes loading
     this.label = character.name;
-    this.sprite = new Image();
-    this.sprite.src = character.spritePath;
+    this.sprites = {};
+    for (const [pose, path] of Object.entries(character.sprites)) {
+      const image = new Image();
+      image.src = path;
+      this.sprites[pose] = image;
+    }
     this.fsm = new StateMachine(this, fighterStates, 'idle'); // must exist before reset() calls fsm.transition
     this.reset(x, facing);
   }
@@ -109,12 +152,16 @@ export class Fighter {
     ctx.fillText(`${this.label} [${this.fsm.current}]`, this.x, top - 8);
   }
 
-  // Squashes/stretches the single static sprite onto the same bounding box
-  // the flat-color box used to fill, so crouch/knockdown's height changes
-  // still read as a pose change without needing per-pose art yet. Falls
-  // back to a flat-color rect if the sprite hasn't finished loading.
+  // Picks the sprite for the current state/move and draws it at a FIXED
+  // frame size, feet-anchored at this.y — unlike the collision hurtbox
+  // (this.height), which still shrinks for crouch/knockdown for gameplay
+  // purposes. The pose art itself shows the crouched/lying/etc. shape within
+  // that fixed frame, rather than squashing a standing image to fit.
+  // Falls back to a flat-color rect at the actual collision box if the
+  // relevant sprite hasn't finished loading.
   drawBody(ctx, left, top) {
-    const spriteReady = this.sprite.complete && this.sprite.naturalWidth > 0;
+    const sprite = this.sprites[poseKeyFor(this)] || this.sprites.idle;
+    const spriteReady = sprite && sprite.complete && sprite.naturalWidth > 0;
 
     if (!spriteReady) {
       ctx.fillStyle = this.hitFlashFrames > 0 ? '#ffffff' : this.color;
@@ -122,19 +169,22 @@ export class Fighter {
       return;
     }
 
+    const frameLeft = this.x - SPRITE_FRAME_WIDTH / 2;
+    const frameTop = this.y - SPRITE_FRAME_HEIGHT;
+
     ctx.save();
     if (this.facing === -1) {
       ctx.translate(this.x, 0);
       ctx.scale(-1, 1);
       ctx.translate(-this.x, 0);
     }
-    ctx.drawImage(this.sprite, left, top, this.width, this.height);
+    ctx.drawImage(sprite, frameLeft, frameTop, SPRITE_FRAME_WIDTH, SPRITE_FRAME_HEIGHT);
     if (this.hitFlashFrames > 0) {
       // Paints solid white only where the sprite already drew opaque
       // pixels — a cheap "flash white" silhouette without a shader.
       ctx.globalCompositeOperation = 'source-atop';
       ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
-      ctx.fillRect(left, top, this.width, this.height);
+      ctx.fillRect(frameLeft, frameTop, SPRITE_FRAME_WIDTH, SPRITE_FRAME_HEIGHT);
     }
     ctx.restore();
   }
