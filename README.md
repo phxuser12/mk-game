@@ -4,6 +4,10 @@
 finisher terminology — inspired by the mechanics and tone of mid-90s
 button-combo fighters, nothing copyrighted reused.
 
+**See [VISION.md](VISION.md) for the full build history, architecture map,
+design decisions/tradeoffs, known limitations, and suggested next steps** —
+read that first if you're picking this project back up after a break.
+
 **Premise**: an underground bare-knuckle tournament recurring every
 generation in a condemned steel-mill city, run by a shadow syndicate. Win
 the circuit or don't leave it.
@@ -174,6 +178,9 @@ assets/
                 sheet + JSON frame data is still future work; these are
                 still one file per frame.
   audio/        reserved for real recorded SFX/music, once they exist
+tools/
+  generate_sprites.py   regenerates every file in assets/sprites/ (Pillow;
+                        a one-off authoring dependency, not a runtime one)
 ```
 
 Character visuals/movesets are meant to be data-driven (sprite sheet + frame
