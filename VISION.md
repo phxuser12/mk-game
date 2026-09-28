@@ -488,6 +488,40 @@ Then open `http://localhost:8000` in a **real browser** (Chrome/Firefox/
 Safari — not a terminal, not this agent's automation tooling). `file://`
 won't work (ES modules block it).
 
+### Automated tests: `npm test`
+
+A `node:test` suite (`tests/`, 61 tests as of this writing) covers the
+engine's pure logic — state machine, motion-buffer special-input matching,
+collision, hit/block/juggle resolution, Fighter movement/animation, round/
+match phase flow, and move/roster data sanity. No test framework dependency
+(Node ships `node:test`/`node:assert` built in), no build step, matching the
+project's zero-npm-dependency approach — `package.json` exists purely to
+declare `"type": "module"` and the `npm test` script.
+
+Two tests exist specifically as regression guards for real bugs caught
+during development (§2/§4 tell the full stories): the jump-integration bug
+(`tests/fighter.test.js`, "y must integrate vy, not just track it") and the
+attack-animation frame-duration-mapping bug (`tests/fighter.test.js`,
+"visits every frame"). If either of these ever starts failing again, it
+means that exact class of bug has resurfaced. `tests/combat.test.js` also
+has a direct regression test for the Milestone 3 simultaneous-hit-trade bug
+(both fighters landing a hit on the same tick must both register).
+
+**What isn't covered, and why**: rendering (`draw()`/`drawBody()`), audio
+(`audioEngine.js`), and raw keyboard handling (`InputManager`'s
+`window.addEventListener` wiring) all need a real browser and aren't
+exercised here — see "If you're an agent testing this without a real
+display" below for how those get verified instead (manually, per change,
+not via this automated suite). `tests/helpers/domShim.js` stubs the *only*
+browser global the testable logic actually touches — `Image`, used by
+`Fighter`'s constructor to preload sprite frames — which is what makes it
+possible to construct and drive a real `Fighter`/`Match` in plain Node at
+all.
+
+Runs in CI on every push/PR to `main` via `.github/workflows/test.yml`
+(`actions/setup-node` + `npm test`, no install step needed — zero
+dependencies).
+
 ### If you're an agent testing this without a real display
 
 The automated browser tooling used throughout this project's development

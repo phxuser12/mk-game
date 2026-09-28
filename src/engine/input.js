@@ -29,9 +29,15 @@ const KEY_BINDINGS = {
   },
 };
 
-const ALL_BOUND_KEYS = new Set(
-  Object.values(KEY_BINDINGS).flatMap((bindings) => Object.values(bindings))
-);
+// Non-player bindings (main.js's wasPressed() calls) that also need
+// preventDefault because some browsers have their own default action bound
+// to them — Firefox's "quick find" activates on "/" otherwise.
+const SYSTEM_KEYS_NEEDING_PREVENT_DEFAULT = new Set(['Slash']);
+
+const ALL_BOUND_KEYS = new Set([
+  ...Object.values(KEY_BINDINGS).flatMap((bindings) => Object.values(bindings)),
+  ...SYSTEM_KEYS_NEEDING_PREVENT_DEFAULT,
+]);
 
 export class InputManager {
   constructor() {
@@ -39,7 +45,7 @@ export class InputManager {
     this.justPressed = new Set();
 
     window.addEventListener('keydown', (event) => {
-      if (ALL_BOUND_KEYS.has(event.code)) event.preventDefault(); // stop arrow-key page scroll etc.
+      if (ALL_BOUND_KEYS.has(event.code)) event.preventDefault(); // stop arrow-key page scroll, Firefox quick-find, etc.
       if (!this.pressed.has(event.code)) this.justPressed.add(event.code);
       this.pressed.add(event.code);
     });

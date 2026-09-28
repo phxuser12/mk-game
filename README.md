@@ -117,7 +117,10 @@ juggle.
 
 Press `` ` `` (backtick) to toggle the hitbox/hurtbox debug overlay (green =
 hurtbox, red = active hitbox, orange = projectile). Press **B** to toggle
-Blood Mode (on by default) — see Finishers below. Press **M** to mute.
+Blood Mode (on by default) — see Finishers below. Press **M** to mute. Press
+**N** to show/hide the white facing-direction arrow near each fighter's
+head. Press **?** for an in-game help screen listing every control, move,
+special, and finisher (the match freezes while it's open).
 
 ## Round structure & finishers
 
@@ -170,6 +173,9 @@ shake; blocked hits get a small gray clash-spark instead.
 
 ```
 index.html
+package.json    "type": "module" + the `npm test` script — no dependencies
+tests/          node:test suite (see Tests below); tests/helpers/ has shared test doubles
+.github/workflows/test.yml   runs `npm test` on every push/PR to main
 src/
   engine/       game loop, input, state machine, collision, combat (hitbox/hurtbox), motion buffer, shared constants
   entities/     Fighter class and its state table, Projectile
@@ -205,3 +211,27 @@ tools/
 
 Character visuals/movesets are meant to be data-driven (sprite sheet + frame
 data JSON per character) rather than hardcoded, so re-skinning later is cheap.
+
+## Tests
+
+```bash
+npm test
+```
+
+Runs on Node's built-in test runner (`node --test`) — no install step, no
+test framework dependency, consistent with the rest of the project's
+zero-npm-dependency approach. 61 tests across `tests/`, covering the engine's
+pure logic: the state machine, motion-buffer special-input matching,
+collision push-apart, hit/block/juggle resolution (including a direct
+regression test for the Milestone 3 simultaneous-hit-trade bug), Fighter
+movement/animation (including a regression test for the jump-integration bug
+and the attack-animation frame-duration-mapping bug — see VISION.md §4 for
+both stories), round/match phase flow, and move/roster data sanity checks.
+
+Rendering, audio, and raw keyboard input aren't covered (they need a real
+browser) — `tests/helpers/domShim.js` stubs the one browser global the
+testable logic touches (`Image`, used by Fighter to preload sprites) so
+`Fighter`/`Match`/combat resolution can be exercised directly in Node.
+
+Runs automatically on every push/PR to `main` via
+`.github/workflows/test.yml`.

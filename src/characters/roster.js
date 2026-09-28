@@ -33,7 +33,7 @@ const FRAME_COUNTS = {
   aleks: {},
 };
 
-const POSE_NAMES = [
+export const POSE_NAMES = [
   'idle', 'walkForward', 'walkBack', 'jump', 'crouch',
   'punch', 'kick', 'uppercut', 'sweep', 'special',
   'hitStun', 'launched', 'knockdown',

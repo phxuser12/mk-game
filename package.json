@@ -1,0 +1,12 @@
+{
+  "name": "mk-game",
+  "private": true,
+  "type": "module",
+  "description": "Blood Circuit — 2D arcade fighting game. No build step, no runtime dependencies; tests use Node's built-in test runner.",
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "test": "node --test"
+  }
+}

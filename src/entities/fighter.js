@@ -176,22 +176,26 @@ export class Fighter {
     }
   }
 
-  draw(ctx) {
+  draw(ctx, { showFacingArrow = true } = {}) {
     const top = this.y - this.height;
     const left = this.x - this.width / 2;
 
     this.drawBody(ctx, left, top);
 
     // Nose triangle so facing direction reads clearly even on roughly
-    // symmetric placeholder art.
-    ctx.fillStyle = '#fff';
-    const noseX = this.x + this.facing * (this.width / 2);
-    ctx.beginPath();
-    ctx.moveTo(noseX, top + 20);
-    ctx.lineTo(noseX - this.facing * 14, top + 12);
-    ctx.lineTo(noseX - this.facing * 14, top + 28);
-    ctx.closePath();
-    ctx.fill();
+    // symmetric placeholder art. Toggleable (help overlay's "N" binding)
+    // since real art makes facing obvious on its own and the arrow can get
+    // in the way of a character's face/helmet.
+    if (showFacingArrow) {
+      ctx.fillStyle = '#fff';
+      const noseX = this.x + this.facing * (this.width / 2);
+      ctx.beginPath();
+      ctx.moveTo(noseX, top + 20);
+      ctx.lineTo(noseX - this.facing * 14, top + 12);
+      ctx.lineTo(noseX - this.facing * 14, top + 28);
+      ctx.closePath();
+      ctx.fill();
+    }
 
     ctx.fillStyle = '#aaa';
     ctx.font = '12px monospace';

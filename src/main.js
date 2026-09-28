@@ -11,6 +11,7 @@ import { drawHealthBars } from './ui/healthBar.js';
 import { drawComboCounters } from './ui/comboCounter.js';
 import { drawDebugOverlay } from './debug/debugDraw.js';
 import { drawMatchOverlay } from './ui/matchOverlay.js';
+import { drawHelpOverlay } from './ui/helpOverlay.js';
 import { Match, PHASE } from './match/match.js';
 import { BasicAI } from './ai/basicAI.js';
 import { ParticleSystem } from './fx/particles.js';
@@ -43,6 +44,8 @@ let hitStopFrames = 0; // ticks remaining where both fighters freeze after a lan
 let debugEnabled = false;
 let goreEnabled = true;
 let aiEnabled = false; // P2 is AI-controlled when true; off by default so 2-player is unchanged
+let helpVisible = false; // freezes the match while the controls/moves reference is up
+let showFacingArrow = true; // the white "nose" triangle near each fighter's head
 let projectiles = [];
 let lastMatchPhase = null;
 
@@ -139,14 +142,21 @@ function update(dt) {
   if (input.wasPressed('KeyB')) goreEnabled = !goreEnabled;
   if (input.wasPressed('KeyP')) aiEnabled = !aiEnabled;
   if (input.wasPressed('KeyM')) audio.setMuted(!audio.isMuted());
+  if (input.wasPressed('KeyN')) showFacingArrow = !showFacingArrow;
+  if (input.wasPressed('Slash')) helpVisible = !helpVisible;
 
   particles.update(dt);
   shake.update(dt);
 
-  const { simulate } = match.update(dt, p1, p2, input, goreEnabled);
-  handleMatchPhaseChange();
-
-  if (match.phase === PHASE.ROUND_INTRO) projectiles = []; // clear any stragglers before the next round starts
+  // The match (round clock, banners, finishers) fully freezes while help is
+  // up, same as a pause — reading the controls reference should never cost
+  // a round.
+  let simulate = false;
+  if (!helpVisible) {
+    ({ simulate } = match.update(dt, p1, p2, input, goreEnabled));
+    handleMatchPhaseChange();
+    if (match.phase === PHASE.ROUND_INTRO) projectiles = []; // clear any stragglers before the next round starts
+  }
 
   if (simulate) {
     const p1Input = input.getInput('p1');
@@ -188,8 +198,8 @@ function render() {
   ctx.translate(offset.x, offset.y);
 
   drawStage(ctx);
-  p1.draw(ctx);
-  p2.draw(ctx);
+  p1.draw(ctx, { showFacingArrow });
+  p2.draw(ctx, { showFacingArrow });
   for (const proj of projectiles) proj.draw(ctx);
   particles.draw(ctx);
   if (debugEnabled) drawDebugOverlay(ctx, [p1, p2], projectiles);
@@ -205,7 +215,9 @@ function render() {
   ctx.textAlign = 'left';
   ctx.fillText(`BLOOD: ${goreEnabled ? 'ON' : 'OFF'} (B)  SOUND: ${audio.isMuted() ? 'OFF' : 'ON'} (M)`, 8, STAGE.HEIGHT - 10);
   ctx.textAlign = 'right';
-  ctx.fillText(`P2: ${aiEnabled ? 'AI' : 'HUMAN'} (P)`, STAGE.WIDTH - 8, STAGE.HEIGHT - 10);
+  ctx.fillText(`P2: ${aiEnabled ? 'AI' : 'HUMAN'} (P)  HELP: ?`, STAGE.WIDTH - 8, STAGE.HEIGHT - 10);
+
+  if (helpVisible) drawHelpOverlay(ctx);
 }
 
 startGameLoop({ update, render });
